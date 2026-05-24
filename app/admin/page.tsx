@@ -1,54 +1,64 @@
-"use client";
-
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import StatsCards from "@/components/admin/StatsCards";
+import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 
-const revenue = [
-  { day: "1", amount: 12000 },
-  { day: "7", amount: 42000 },
-  { day: "14", amount: 61000 },
-  { day: "21", amount: 94000 },
-  { day: "30", amount: 132000 },
-];
+export const dynamic = "force-dynamic";
 
-const enrollments = [
-  { batch: "12 Com", value: 180 },
-  { batch: "11 Sci", value: 140 },
-  { batch: "BCom", value: 96 },
-  { batch: "Tally", value: 72 },
-];
+async function getStats() {
+  if (!isSupabaseAdminConfigured) {
+    return {
+      students: 0,
+      revenue: 0,
+      batches: 0,
+      liveToday: 0,
+    };
+  }
 
-export default function AdminDashboardPage() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const [students, payments, batches, liveToday] = await Promise.all([
+    supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student"),
+    supabaseAdmin.from("payments").select("amount,status").eq("status", "success"),
+    supabaseAdmin.from("batches").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabaseAdmin
+      .from("live_classes")
+      .select("id", { count: "exact", head: true })
+      .gte("scheduled_at", today.toISOString())
+      .lt("scheduled_at", tomorrow.toISOString()),
+  ]);
+
+  return {
+    students: students.count ?? 0,
+    revenue: (payments.data ?? []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+    batches: batches.count ?? 0,
+    liveToday: liveToday.count ?? 0,
+  };
+}
+
+export default async function AdminDashboardPage() {
+  const stats = await getStats();
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Admin dashboard</h1>
-        <p className="text-sm text-gray-500">Revenue, enrollment, and platform operations.</p>
+        <p className="text-sm text-gray-500">Live platform totals from Supabase.</p>
       </div>
-      <StatsCards />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="h-80 rounded-lg border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 font-bold text-gray-900">Revenue last 30 days</h2>
-          <ResponsiveContainer width="100%" height="85%">
-            <LineChart data={revenue}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Line type="monotone" dataKey="amount" stroke="#5c35d9" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="h-80 rounded-lg border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 font-bold text-gray-900">Enrollments by batch</h2>
-          <ResponsiveContainer width="100%" height="85%">
-            <BarChart data={enrollments}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="batch" />
-              <YAxis />
-              <Bar dataKey="value" fill="#5c35d9" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <StatsCards
+        stats={[
+          { label: "Total Students", value: String(stats.students) },
+          { label: "Total Revenue", value: `Rs. ${stats.revenue.toLocaleString("en-IN")}` },
+          { label: "Active Batches", value: String(stats.batches) },
+          { label: "Live Classes Today", value: String(stats.liveToday) },
+        ]}
+      />
+      <div className="rounded-lg border border-gray-200 bg-white p-5">
+        <h2 className="font-bold text-gray-900">Analytics</h2>
+        <p className="mt-2 text-sm text-gray-500">
+          Charts will appear when there are payments, enrollments, and live class records to plot.
+        </p>
       </div>
     </div>
   );

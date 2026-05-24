@@ -54,7 +54,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/login?message=Check your email to verify account");
+    window.location.href = "/login?message=Account created! Please sign in.";
   };
 
   return (

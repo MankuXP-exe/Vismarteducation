@@ -6,6 +6,7 @@ import { BarChart3, CreditCard, LayoutDashboard, Package, Users } from "lucide-r
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/batches", label: "Batches", icon: Package },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },

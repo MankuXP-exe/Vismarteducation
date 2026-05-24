@@ -1,11 +1,4 @@
-const defaults = [
-  { label: "Total Students", value: "1,248" },
-  { label: "Total Revenue", value: "Rs. 18.4L" },
-  { label: "Active Batches", value: "16" },
-  { label: "Live Classes Today", value: "5" },
-];
-
-export default function StatsCards({ stats = defaults }: { stats?: { label: string; value: string }[] }) {
+export default function StatsCards({ stats }: { stats: { label: string; value: string }[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-4">
       {stats.map((stat) => (

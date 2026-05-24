@@ -9,8 +9,11 @@ import {
   Package,
   ClipboardList,
   Gift,
+  ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getEffectiveRole } from "@/lib/auth/roles";
 
 interface NavItem {
   label: string;
@@ -75,6 +78,24 @@ const navSections: NavSection[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, profile } = useAuth();
+  const role = getEffectiveRole(user, profile);
+  const sections =
+    role === "teacher" || role === "admin"
+      ? [
+          ...navSections,
+          {
+            title: "ADMIN",
+            items: [
+              {
+                label: role === "admin" ? "Admin Panel" : "Teacher Panel",
+                icon: <ShieldCheck size={18} />,
+                href: role === "admin" ? "/admin/users" : "/teacher",
+              },
+            ],
+          },
+        ]
+      : navSections;
 
   const isActive = (href: string) => {
     if (href === "/dashboard/study") {
@@ -104,7 +125,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 pb-6">
-        {navSections.map((section) => (
+        {sections.map((section) => (
           <div key={section.title}>
             <p className="text-[10px] font-semibold text-gray-400 tracking-widest px-4 pt-5 pb-1 uppercase">
               {section.title}
