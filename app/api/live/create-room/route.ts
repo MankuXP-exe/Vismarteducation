@@ -100,11 +100,13 @@ export async function POST(req: Request) {
     const chapterId = await ensureChapter(body.batchId, subjectId, body.chapterId, body.chapterTitle);
     const roomName = body.roomName || `class-${crypto.randomUUID()}`;
 
-    const roomRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live/create-room`, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
+    const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
+    const roomRes = await fetch(`${apiUrl}/live/create-room`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-secret": process.env.VPS_API_SECRET!,
+        "x-api-secret": apiSecret,
       },
       body: JSON.stringify({ roomName }),
     });

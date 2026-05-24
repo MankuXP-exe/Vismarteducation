@@ -51,13 +51,15 @@ export async function POST(req: Request) {
       .eq("id", user.id)
       .single();
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
+    const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
     const tokenRes = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/live/${role === "teacher" ? "teacher-token" : "student-token"}`,
+      `${apiUrl}/live/${role === "teacher" ? "teacher-token" : "student-token"}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-secret": process.env.VPS_API_SECRET!,
+          "x-api-secret": apiSecret,
         },
         body: JSON.stringify({
           roomName: liveClass.hms_room_id || classId,
@@ -79,7 +81,7 @@ export async function POST(req: Request) {
       token: tokenData.token,
       roomName: liveClass.hms_room_id || classId,
       classTitle: liveClass.title,
-      livekitUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL,
+      livekitUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL || "wss://live.vismartlearningeducation.com",
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

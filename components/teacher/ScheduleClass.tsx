@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function ScheduleClass({ batchId }: { batchId: string }) {
   const [status, setStatus] = useState("");
@@ -25,7 +26,13 @@ export default function ScheduleClass({ batchId }: { batchId: string }) {
     });
 
     const data = await res.json();
-    setStatus(res.ok ? `Class scheduled. Link: /teacher/live/${data.liveClass.id}` : data.error || "Unable to schedule class");
+    if (res.ok) {
+      setStatus(`Class scheduled. Link: /teacher/live/${data.liveClass.id}`);
+      toast.success("Live class scheduled successfully!");
+    } else {
+      setStatus(data.error || "Unable to schedule class");
+      toast.error(data.error || "Unable to schedule class");
+    }
   }
 
   return (
