@@ -3,6 +3,46 @@ import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 
+async function ensureChapterRecord(batchId: string, subjectId: string) {
+  const { data: existing } = await supabaseAdmin
+    .from("chapters")
+    .select("id")
+    .eq("batch_id", batchId)
+    .eq("subject_id", subjectId)
+    .eq("is_active", true)
+    .order("chapter_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.id) return existing.id;
+
+  const { data: maxChapter } = await supabaseAdmin
+    .from("chapters")
+    .select("chapter_number")
+    .eq("batch_id", batchId)
+    .eq("subject_id", subjectId)
+    .order("chapter_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextNumber = maxChapter?.chapter_number ? String(Number(maxChapter.chapter_number) + 1) : "1";
+
+  const { data, error } = await supabaseAdmin
+    .from("chapters")
+    .insert({
+      batch_id: batchId,
+      subject_id: subjectId,
+      chapter_number: nextNumber,
+      title: `Chapter ${nextNumber}`,
+      is_active: true,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createRouteClient();
@@ -24,7 +64,7 @@ export async function POST(req: Request) {
 
     const { data: liveClass } = await supabaseAdmin
       .from("live_classes")
-      .select("id, hms_room_id, status")
+      .select("id, hms_room_id, status, batch_id, subject_id, chapter_id, title, description, teacher_id")
       .eq("id", classId)
       .single();
 
@@ -42,6 +82,25 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({ roomName: liveClass.hms_room_id }),
       }).catch(() => {});
+    }
+
+    if (liveClass.subject_id) {
+      let chapterId = liveClass.chapter_id;
+      if (!chapterId) {
+        chapterId = await ensureChapterRecord(liveClass.batch_id, liveClass.subject_id);
+      }
+
+      await supabaseAdmin.from("lectures").insert({
+        batch_id: liveClass.batch_id,
+        subject_id: liveClass.subject_id,
+        chapter_id: chapterId,
+        teacher_id: liveClass.teacher_id || user.id,
+        title: liveClass.title,
+        description: liveClass.description || "",
+        lecture_type: "live_recording",
+        is_active: true,
+        published_at: new Date().toISOString(),
+      });
     }
 
     const { error } = await supabaseAdmin

@@ -34,10 +34,13 @@ export async function POST(req: Request) {
         .eq("student_id", user.id)
         .eq("batch_id", liveClass.batch_id)
         .eq("status", "active")
-        .single();
+        .maybeSingle();
 
       if (!enrollment) {
-        return NextResponse.json({ error: "Not enrolled in this batch" }, { status: 403 });
+        return NextResponse.json({
+          error: "You are not enrolled in this batch. Please purchase the batch to access live classes.",
+          enrollUrl: `/batches/${liveClass.batch_id}`,
+        }, { status: 403 });
       }
     }
 
