@@ -32,7 +32,13 @@ export default function LoginClient() {
       return;
     }
 
-    window.location.href = redirect;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      window.location.href = redirect;
+    } else {
+      setError("Session not created. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
