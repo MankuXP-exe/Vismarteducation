@@ -42,7 +42,10 @@ export async function proxy(req: NextRequest) {
       .eq("id", session.user.id)
       .single();
 
-    const role = profile?.role;
+    const role =
+      profile?.role ||
+      session.user.app_metadata?.role ||
+      session.user.user_metadata?.role;
     if (path.startsWith("/teacher") && role !== "teacher" && role !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
