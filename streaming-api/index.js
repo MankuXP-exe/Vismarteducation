@@ -25,8 +25,8 @@ const HOST = process.env.HOST || "127.0.0.1";
 const API_SECRET = process.env.VPS_API_SECRET || process.env.API_SECRET || "replace_with_long_random_secret";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://vismartlearningeducation.com";
 const LIVEKIT_HOST = process.env.LIVEKIT_HOST || process.env.NEXT_PUBLIC_LIVEKIT_URL || "http://127.0.0.1:7880";
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "secret";
+const LIVEKIT_API_KEY = (process.env.LIVEKIT_API_KEY && !process.env.LIVEKIT_API_KEY.includes("your_") && process.env.LIVEKIT_API_KEY !== "devkey") ? process.env.LIVEKIT_API_KEY : "devkey";
+const LIVEKIT_API_SECRET = (process.env.LIVEKIT_API_SECRET && !process.env.LIVEKIT_API_SECRET.includes("your_") && process.env.LIVEKIT_API_SECRET !== "secret") ? process.env.LIVEKIT_API_SECRET : "secret";
 const VPS_STREAM_URL = process.env.VPS_STREAM_URL || "https://stream.vismart.com";
 
 const ROOT_DIR = process.env.VI_SMART_ROOT_DIR || "/opt/vi-smart";

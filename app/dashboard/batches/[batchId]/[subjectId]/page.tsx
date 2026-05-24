@@ -1,322 +1,284 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  ChevronRight,
-  Play,
-  FileText,
-  ClipboardList,
-  X,
-  Download,
-  Eye,
-  Info,
-} from "lucide-react";
-import {
-  chaptersData,
-  lecturesData,
-  notesData,
-  dppsData,
-} from "@/lib/student-mock-data";
-import { motion, AnimatePresence } from "framer-motion";
+import { notFound, redirect } from "next/navigation";
+import { ChevronRight, FileText, Play } from "lucide-react";
+import { getEffectiveRole } from "@/lib/auth/roles";
+import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
+import { createServerClient } from "@/lib/supabase/server";
 
-type ContentTab = "all" | "lectures" | "dpps" | "notes" | "dpp-pdfs" | "dpp-videos";
+export const dynamic = "force-dynamic";
 
-export default function SubjectPage() {
-  const params = useParams<{ batchId: string; subjectId: string }>();
-  const router = useRouter();
+type ChapterRow = {
+  id: string;
+  chapter_number?: string | null;
+  title: string;
+  sort_order?: number | null;
+};
 
-  const { batchId, subjectId } = params;
+type LectureRow = {
+  id: string;
+  chapter_id: string;
+  title: string;
+  description?: string | null;
+  cloudflare_playback_url?: string | null;
+  cloudflare_thumbnail_url?: string | null;
+  duration_label?: string | null;
+  duration_seconds?: number | null;
+  published_at?: string | null;
+  sort_order?: number | null;
+};
 
-  const chapters = chaptersData[subjectId] ?? [];
-  const [selectedChapter, setSelectedChapter] = useState(chapters[0]?.id ?? "");
-  const [contentTab, setContentTab] = useState<ContentTab>("all");
-  const [infoDismissed, setInfoDismissed] = useState(false);
+function formatDate(value?: string | null) {
+  if (!value) return "Not published";
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
-  const chapterKey = `${selectedChapter}-${subjectId}`;
-  const lectures = lecturesData[chapterKey] ?? [];
-  const notes = notesData[chapterKey] ?? [];
-  const dpps = dppsData[chapterKey] ?? [];
+function durationLabel(lecture: LectureRow) {
+  if (lecture.duration_label) return lecture.duration_label;
+  if (!lecture.duration_seconds) return "";
+  const minutes = Math.max(1, Math.round(lecture.duration_seconds / 60));
+  return `${minutes} min`;
+}
 
-  const contentTabs: { id: ContentTab; label: string }[] = [
-    { id: "all", label: "All" },
-    { id: "lectures", label: "Lectures" },
-    { id: "dpps", label: "DPPs" },
-    { id: "notes", label: "Notes" },
-    { id: "dpp-pdfs", label: "DPP PDFs" },
-    { id: "dpp-videos", label: "DPP Videos" },
-  ];
+async function assertAccess(userId: string, batchId: string, user: any) {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  const role = getEffectiveRole(user, profile);
+  const canManage = role === "teacher" || role === "admin";
 
-  const showLectures = contentTab === "all" || contentTab === "lectures";
-  const showNotes = contentTab === "all" || contentTab === "notes";
-  const showDpps = contentTab === "all" || contentTab === "dpps";
-  const showDppPdfs = contentTab === "dpp-pdfs";
-  const showDppVideos = contentTab === "dpp-videos";
+  if (canManage) return;
+
+  const { data: enrollment } = await supabaseAdmin
+    .from("enrollments")
+    .select("id")
+    .eq("student_id", userId)
+    .eq("batch_id", batchId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!enrollment) redirect("/dashboard/batches");
+}
+
+async function getSubjectPageData(batchId: string, subjectId: string, chapterParam?: string) {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect(`/login?redirect=/dashboard/batches/${batchId}/${subjectId}`);
+  if (!isSupabaseAdminConfigured) return null;
+
+  await assertAccess(user.id, batchId, user);
+
+  const [batchResult, subjectResult, chaptersResult, lecturesResult, materialsResult] =
+    await Promise.all([
+      supabaseAdmin.from("batches").select("id,title").eq("id", batchId).maybeSingle(),
+      supabaseAdmin
+        .from("subjects")
+        .select("id,name,abbreviation")
+        .eq("id", subjectId)
+        .eq("batch_id", batchId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("chapters")
+        .select("id,chapter_number,title,sort_order")
+        .eq("batch_id", batchId)
+        .eq("subject_id", subjectId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      supabaseAdmin
+        .from("lectures")
+        .select(
+          "id,chapter_id,title,description,cloudflare_playback_url,cloudflare_thumbnail_url,duration_label,duration_seconds,published_at,sort_order"
+        )
+        .eq("batch_id", batchId)
+        .eq("subject_id", subjectId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      supabaseAdmin
+        .from("study_materials")
+        .select("id,chapter_id,lecture_id,title,file_url,file_name,material_type,published_at")
+        .eq("batch_id", batchId)
+        .eq("subject_id", subjectId)
+        .order("published_at", { ascending: false }),
+    ]);
+
+  if (!batchResult.data || !subjectResult.data) return null;
+
+  const chapters = (chaptersResult.data ?? []) as ChapterRow[];
+  const selectedChapterId =
+    chapters.find((chapter) => chapter.id === chapterParam)?.id || chapters[0]?.id || "";
+
+  return {
+    batch: batchResult.data,
+    subject: subjectResult.data,
+    chapters,
+    selectedChapterId,
+    lectures: ((lecturesResult.data ?? []) as LectureRow[]).filter(
+      (lecture) => !selectedChapterId || lecture.chapter_id === selectedChapterId
+    ),
+    materials: (materialsResult.data ?? []).filter(
+      (material: any) => !selectedChapterId || material.chapter_id === selectedChapterId
+    ),
+  };
+}
+
+export default async function SubjectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ batchId: string; subjectId: string }>;
+  searchParams: Promise<{ chapter?: string }>;
+}) {
+  const { batchId, subjectId } = await params;
+  const { chapter } = await searchParams;
+  const data = await getSubjectPageData(batchId, subjectId, chapter);
+
+  if (!data) notFound();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex flex-col h-full"
-    >
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.back()}
-          id="back-btn-subject"
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors font-medium"
-        >
-          <ArrowLeft size={18} />
-          <span>All Classes</span>
-        </button>
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link href={`/dashboard/batches/${batchId}`} className="text-sm font-medium text-gray-500 hover:text-gray-900">
+          Back to subjects
+        </Link>
+        <h1 className="mt-3 text-xl font-bold text-gray-900">{data.subject.name}</h1>
+        <p className="mt-1 text-sm text-gray-500">{data.batch.title}</p>
       </div>
 
-      {/* Two-panel Layout */}
-      <div className="flex gap-6 min-h-0">
-        {/* LEFT PANEL — Chapters (30%) */}
-        <div className="w-[260px] shrink-0">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            ALL CHAPTERS
+      <div className="flex gap-6">
+        <aside className="w-[260px] shrink-0">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            All Chapters
           </p>
-          <div className="flex flex-col gap-2">
-            {chapters.map((ch) => {
-              const isActive = selectedChapter === ch.id;
-              return (
-                <button
-                  key={ch.id}
-                  id={`chapter-${ch.id}`}
-                  onClick={() => setSelectedChapter(ch.id)}
-                  className={`flex items-center gap-3 w-full text-left px-4 py-4 rounded-xl border transition-all duration-150 ${
-                    isActive
-                      ? "bg-purple-50 border-purple-200 border-l-4 border-l-[#5c35d9]"
-                      : "bg-white border-gray-200 hover:border-purple-300"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="block text-[#5c35d9] text-xs font-bold mb-0.5">
-                      {ch.number}
+          {data.chapters.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-400">
+              No chapters found.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {data.chapters.map((chapterItem) => {
+                const isActive = data.selectedChapterId === chapterItem.id;
+                return (
+                  <Link
+                    key={chapterItem.id}
+                    href={`/dashboard/batches/${batchId}/${subjectId}?chapter=${chapterItem.id}`}
+                    className={`flex items-center gap-3 rounded-xl border px-4 py-4 text-left ${
+                      isActive
+                        ? "border-l-4 border-purple-200 border-l-[#5c35d9] bg-purple-50"
+                        : "border-gray-200 bg-white hover:border-purple-300"
+                    }`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-bold text-[#5c35d9]">
+                        {chapterItem.chapter_number ? `CH-${chapterItem.chapter_number}` : "CH"}
+                      </span>
+                      <span className="block text-sm font-medium leading-tight text-gray-800">
+                        {chapterItem.title}
+                      </span>
                     </span>
-                    <span className="block text-gray-800 font-medium text-sm leading-tight">
-                      {ch.title}
-                    </span>
-                  </div>
-                  <ChevronRight
-                    size={14}
-                    className={`shrink-0 ${isActive ? "text-[#5c35d9]" : "text-gray-300"}`}
-                  />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* RIGHT PANEL — Content (70%) */}
-        <div className="flex-1 min-w-0">
-          {/* Content Tabs */}
-          <div className="flex gap-4 border-b border-gray-200 mb-4 overflow-x-auto pb-0">
-            {contentTabs.map((tab) => (
-              <button
-                key={tab.id}
-                id={`content-tab-${tab.id}`}
-                onClick={() => setContentTab(tab.id)}
-                className={`pb-2.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 ${
-                  contentTab === tab.id
-                    ? "border-[#5c35d9] text-[#5c35d9]"
-                    : "border-transparent text-gray-400 hover:text-gray-700"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Info Banner */}
-          {!infoDismissed && (
-            <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 text-blue-800 rounded-xl px-4 py-3 mb-4 text-sm">
-              <Info size={16} className="text-blue-400 shrink-0 mt-0.5" />
-              <p className="flex-1 text-blue-700 text-xs leading-relaxed">
-                Don't worry if there's a small calculation error. Any missing points will be verified &amp; added soon!
-              </p>
-              <button
-                onClick={() => setInfoDismissed(true)}
-                className="text-blue-300 hover:text-blue-500 transition-colors shrink-0"
-                aria-label="Dismiss banner"
-              >
-                <X size={14} />
-              </button>
+                    <ChevronRight
+                      size={14}
+                      className={isActive ? "text-[#5c35d9]" : "text-gray-300"}
+                    />
+                  </Link>
+                );
+              })}
             </div>
           )}
+        </aside>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={contentTab + selectedChapter}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              {/* LECTURES */}
-              {showLectures && (
-                <div className="mb-6">
-                  {(contentTab === "all") && lectures.length > 0 && (
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
-                      Lectures
-                    </h3>
-                  )}
-                  {lectures.length === 0 && (contentTab === "lectures" || contentTab === "all") ? (
-                    <div className="bg-white border border-gray-100 rounded-xl p-8 text-center text-gray-400">
-                      <Play size={32} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">No lectures uploaded yet for this chapter.</p>
+        <main className="min-w-0 flex-1">
+          <section className="mb-6">
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
+              Lectures
+            </h2>
+            {data.lectures.length === 0 ? (
+              <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-gray-400">
+                <Play size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No lectures uploaded yet for this chapter.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {data.lectures.map((lecture) => (
+                  <div
+                    key={lecture.id}
+                    className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 hover:border-purple-200"
+                  >
+                    <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-purple-100">
+                      {lecture.cloudflare_thumbnail_url ? (
+                        <img
+                          src={lecture.cloudflare_thumbnail_url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Play size={20} className="text-[#5c35d9]" />
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {lectures.map((lec, idx) => (
-                        <div
-                          key={lec.id}
-                          className="flex items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 hover:border-purple-200 hover:shadow-sm transition-all"
-                        >
-                          {/* Thumbnail */}
-                          <div className="w-20 h-14 rounded-lg shrink-0 flex items-center justify-center"
-                            style={{ background: "linear-gradient(135deg, #ede9ff 0%, #c4b5fd 100%)" }}
-                          >
-                            <Play size={20} className="text-[#5c35d9]" />
-                          </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-800">{lecture.title}</p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {formatDate(lecture.published_at)}
+                        {durationLabel(lecture) ? ` - ${durationLabel(lecture)}` : ""}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/dashboard/batches/${batchId}/${subjectId}/lecture/${lecture.id}`}
+                      className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-[#5c35d9] hover:underline"
+                    >
+                      <Play size={14} />
+                      Watch Now
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-800 text-sm truncate">
-                              {lec.title}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              📅 {lec.uploadedOn} &nbsp;·&nbsp; ⏱ {lec.duration}
-                            </p>
-                          </div>
-
-                          {/* Watch button */}
-                          <Link
-                            href={`/dashboard/batches/${batchId}/${subjectId}/lecture/${lec.id}`}
-                            id={`watch-${lec.id}`}
-                            className="shrink-0 flex items-center gap-1.5 text-[#5c35d9] text-sm font-semibold hover:underline"
-                          >
-                            <Play size={14} />
-                            Watch Now
-                          </Link>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* NOTES */}
-              {showNotes && (
-                <div className="mb-6">
-                  {contentTab === "all" && notes.length > 0 && (
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
-                      Notes
-                    </h3>
-                  )}
-                  {notes.length === 0 && (contentTab === "notes" || contentTab === "all") && (
-                    <div className="bg-white border border-gray-100 rounded-xl p-8 text-center text-gray-400">
-                      <FileText size={32} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">No notes available for this chapter yet.</p>
-                    </div>
-                  )}
-                  {notes.length > 0 && (
-                    <div className="flex flex-col gap-3">
-                      {notes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="flex items-center gap-4 bg-white border border-gray-100 rounded-xl p-4"
-                        >
-                          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                            <FileText size={20} className="text-blue-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-800 text-sm truncate">{note.title}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {note.type} · {note.uploadedOn}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-purple-300 hover:text-purple-600 transition-all">
-                              <Eye size={14} />
-                              View
-                            </button>
-                            <button className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100">
-                              <Download size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* DPPs */}
-              {showDpps && (
-                <div className="mb-6">
-                  {contentTab === "all" && dpps.length > 0 && (
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
-                      DPPs
-                    </h3>
-                  )}
-                  {dpps.length === 0 && (contentTab === "dpps" || contentTab === "all") && (
-                    <div className="bg-white border border-gray-100 rounded-xl p-8 text-center text-gray-400">
-                      <ClipboardList size={32} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">No DPPs available for this chapter yet.</p>
-                    </div>
-                  )}
-                  {dpps.length > 0 && (
-                    <div className="flex flex-col gap-3">
-                      {dpps.map((dpp) => (
-                        <div
-                          key={dpp.id}
-                          className="flex items-center justify-between bg-white border border-gray-100 rounded-xl p-4"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                              <ClipboardList size={20} className="text-[#5c35d9]" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-800 text-sm">{dpp.title}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                Questions: {dpp.questions} &nbsp;·&nbsp; Duration: {dpp.duration}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button className="text-sm font-semibold text-white bg-[#5c35d9] px-4 py-1.5 rounded-lg hover:bg-[#4a28b8] transition-colors">
-                              Start DPP
-                            </button>
-                            <button className="text-sm font-medium text-gray-500 border border-gray-200 px-4 py-1.5 rounded-lg hover:border-gray-300 transition-colors">
-                              Solutions
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* DPP PDFs / DPP Videos empty states */}
-              {(showDppPdfs || showDppVideos) && (
-                <div className="bg-white border border-gray-100 rounded-xl p-8 text-center text-gray-400">
-                  <FileText size={32} className="mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">
-                    No {showDppPdfs ? "DPP PDFs" : "DPP Videos"} available yet.
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+          <section>
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
+              Notes and PDFs
+            </h2>
+            {data.materials.length === 0 ? (
+              <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-gray-400">
+                <FileText size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No notes uploaded yet for this chapter.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {data.materials.map((material: any) => (
+                  <a
+                    key={material.id}
+                    href={material.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 hover:border-purple-200"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+                      <FileText size={20} className="text-blue-500" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-gray-800">
+                        {material.title}
+                      </span>
+                      <span className="text-xs capitalize text-gray-400">
+                        {material.material_type || "notes"}
+                      </span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
       </div>
-    </motion.div>
+    </div>
   );
 }
