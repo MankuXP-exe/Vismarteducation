@@ -80,7 +80,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, profile } = useAuth();
   const role = getEffectiveRole(user, profile);
-  const sections =
+  const sections: NavSection[] =
     role === "teacher" || role === "admin"
       ? [
           ...navSections,
