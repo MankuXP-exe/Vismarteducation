@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronRight, FileText } from "lucide-react";
+import { ChevronRight, FileText, Video } from "lucide-react";
 import { getEffectiveRole } from "@/lib/auth/roles";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
@@ -102,7 +102,7 @@ async function getBatchPageData(batchId: string) {
     );
   }
 
-  const [subjectsResult, lecturesResult, materialsResult] = await Promise.all([
+  const [subjectsResult, lecturesResult, materialsResult, liveClassesResult] = await Promise.all([
     supabaseAdmin
       .from("subjects")
       .select("id,name,abbreviation,color,sort_order")
@@ -120,6 +120,12 @@ async function getBatchPageData(batchId: string) {
       .eq("batch_id", batchId)
       .order("published_at", { ascending: false })
       .limit(20),
+    supabaseAdmin
+      .from("live_classes")
+      .select("id,title,description,scheduled_at,status,started_at")
+      .eq("batch_id", batchId)
+      .order("scheduled_at", { ascending: false })
+      .limit(10),
   ]);
 
   const officialNames = new Set(officialSubjects.map(normalizeSubjectName));
@@ -149,6 +155,7 @@ async function getBatchPageData(batchId: string) {
     batch: batchResult.data,
     subjects: Array.from(subjectsByName.values()),
     materials: materialsResult.data ?? [],
+    liveClasses: liveClassesResult.data ?? [],
   };
 }
 
@@ -199,6 +206,54 @@ export default async function BatchDetailPage({
                 <ChevronRight size={16} className="shrink-0 text-gray-300 group-hover:text-[#5c35d9]" />
               </Link>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Live Classes</h2>
+        {data.liveClasses.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
+            No live classes for this batch yet.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {data.liveClasses.map((lc: any) => {
+              const isLive = lc.status === "live";
+              const isScheduled = lc.status === "scheduled";
+              return (
+                <Link
+                  key={lc.id}
+                  href={`/dashboard/live/${lc.id}`}
+                  className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-4 hover:border-purple-200"
+                >
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${isLive ? "bg-red-50" : "bg-purple-50"}`}>
+                    <Video size={18} className={isLive ? "text-red-500" : "text-purple-500"} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="block truncate text-sm font-medium text-gray-800">{lc.title}</span>
+                      {isLive && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                          LIVE
+                        </span>
+                      )}
+                      {isScheduled && (
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-600">
+                          UPCOMING
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {isLive ? "Started " : "Scheduled "}
+                      {new Date(lc.scheduled_at).toLocaleString("en-IN")}
+                    </span>
+                  </span>
+                  <ChevronRight size={16} className="shrink-0 text-gray-300 group-hover:text-[#5c35d9]" />
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>

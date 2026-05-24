@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
+import { notifyBatchStudents } from "@/lib/notifications";
 
 function abbreviationFromName(name: string) {
   const letters = name
@@ -96,6 +97,14 @@ export async function POST(req: Request) {
       .single();
 
     if (error) throw error;
+
+    notifyBatchStudents(
+      body.batchId,
+      profile?.full_name || "Teacher",
+      body.title || "Instant Live Class",
+      "live_class",
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://vismartlearningeducation.com"}/dashboard/live/${liveClass.id}`
+    );
 
     return NextResponse.json({ liveClass });
   } catch (err: any) {

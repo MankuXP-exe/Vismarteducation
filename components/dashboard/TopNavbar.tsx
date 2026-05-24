@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Bell, ChevronDown, LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, User } from "lucide-react";
 import BatchSwitcher from "./BatchSwitcher";
+import NotificationBell from "./NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function TopNavbar() {
@@ -54,13 +55,7 @@ export default function TopNavbar() {
 
         {/* RIGHT — Notifications + Profile */}
         <div className="flex items-center gap-3 shrink-0">
-          {/* Notification Bell */}
-          <button
-            aria-label="Notifications"
-            className="relative text-white/60 hover:text-white transition-colors p-1"
-          >
-            <Bell size={20} />
-          </button>
+          <NotificationBell />
 
           <div className="relative flex items-center gap-2">
             <span className="text-white/70 text-sm hidden md:block">
