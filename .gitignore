@@ -1,0 +1,29 @@
+﻿# dependencies
+node_modules/
+.pnpm-store/
+
+# next
+.next/
+out/
+build/
+.vercel/
+
+# env and secrets
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# local artifacts
+*.tsbuildinfo
+.DS_Store
+streaming-api-deploy.tar.gz
+
+.clerk/
+.agents/

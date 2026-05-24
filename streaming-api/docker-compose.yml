@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  api:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - BBB_URL=https://live.yourdomain.com/bigbluebutton/api
+      - BBB_SECRET=YOUR_BBB_SECRET
+      - JWT_SECRET=super-secret-jwt-key
+      - NGINX_SECURE_LINK_SECRET=secure-link-secret
+      - CDN_URL=https://cdn.yourdomain.com
+    restart: unless-stopped

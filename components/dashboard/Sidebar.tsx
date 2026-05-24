@@ -1,0 +1,141 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  BookOpen,
+  Calculator,
+  Library,
+  Package,
+  ClipboardList,
+  Gift,
+  Sparkles,
+} from "lucide-react";
+
+interface NavItem {
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+  badge?: string;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    title: "LEARN ONLINE",
+    items: [
+      {
+        label: "Study",
+        icon: <BookOpen size={18} />,
+        href: "/dashboard/study",
+      },
+      {
+        label: "Pi",
+        icon: <Calculator size={18} />,
+        href: "/dashboard/pi",
+        badge: "NEW",
+      },
+      {
+        label: "Library",
+        icon: <Library size={18} />,
+        href: "/dashboard/library",
+      },
+    ],
+  },
+  {
+    title: "STUDY PACKS",
+    items: [
+      {
+        label: "Batches",
+        icon: <Package size={18} />,
+        href: "/dashboard/batches",
+      },
+      {
+        label: "My Tests",
+        icon: <ClipboardList size={18} />,
+        href: "/dashboard/tests",
+      },
+    ],
+  },
+  {
+    title: "MORE",
+    items: [
+      {
+        label: "Refer & Earn",
+        icon: <Gift size={18} />,
+        href: "/dashboard/refer",
+      },
+    ],
+  },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === "/dashboard/study") {
+      return (
+        pathname === "/dashboard/study" ||
+        pathname?.startsWith("/dashboard/study/")
+      );
+    }
+    if (href === "/dashboard/batches") {
+      return pathname?.startsWith("/dashboard/batches");
+    }
+    return pathname === href;
+  };
+
+  return (
+    <aside
+      className="fixed left-0 top-[56px] h-[calc(100vh-56px)] w-[200px] bg-white border-r border-[#f0f0f0] overflow-y-auto z-30 flex flex-col"
+    >
+      {/* Vi Smart branding strip */}
+      <div className="px-4 py-3 border-b border-[#f0f0f0]">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-[#5c35d9] flex items-center justify-center">
+            <Sparkles size={12} className="text-white" />
+          </div>
+          <span className="text-xs font-bold text-gray-500 tracking-wide">STUDENT PORTAL</span>
+        </div>
+      </div>
+
+      <nav className="flex-1 pb-6">
+        {navSections.map((section) => (
+          <div key={section.title}>
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest px-4 pt-5 pb-1 uppercase">
+              {section.title}
+            </p>
+            {section.items.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-150 relative ${
+                    active
+                      ? "bg-[#ede9ff] text-[#5c35d9] font-semibold border-r-2 border-[#5c35d9]"
+                      : "text-gray-600 hover:bg-[#f0f0ff] hover:text-[#5c35d9]"
+                  }`}
+                >
+                  <span className={active ? "text-[#5c35d9]" : "text-gray-400"}>
+                    {item.icon}
+                  </span>
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+    </aside>
+  );
+}
