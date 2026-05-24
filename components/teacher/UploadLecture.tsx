@@ -65,7 +65,7 @@ export default function UploadLecture({ batchId, subjects }: Props) {
       });
       const tokenData = (await tokenRes.json()) as TokenResponse;
 
-      if (!tokenRes.ok) {
+      if (!tokenRes.ok || !tokenData.uploadUrl || !tokenData.token) {
         throw new Error(tokenData.error || "Unable to prepare upload");
       }
 
@@ -73,11 +73,10 @@ export default function UploadLecture({ batchId, subjects }: Props) {
       formData.set("subjectName", subjectName);
       formData.set("subjectId", tokenData.subjectId || "");
       formData.set("chapterId", tokenData.chapterId || "");
-      formData.set("teacherId", tokenData.token || "");
 
-      setStatus("Uploading...");
-      const result = await uploadWithProgress("/api/upload/video", "", formData, setProgress);
-      setStatus(`Lecture saved!`);
+      setStatus("Uploading directly to VPS...");
+      const result = await uploadWithProgress(tokenData.uploadUrl!, tokenData.token, formData, setProgress);
+      setStatus(`Lecture saved: ${result.videoUrl || "uploaded"}`);
       form.reset();
       setSelectedSubject("");
       setCustomSubject("");
