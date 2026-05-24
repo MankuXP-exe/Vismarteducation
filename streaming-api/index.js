@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: __dirname + "/.env" });
 
 try {
   global.WebSocket = global.WebSocket || require("ws");
