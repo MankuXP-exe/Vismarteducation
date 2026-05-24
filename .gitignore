@@ -27,3 +27,4 @@ streaming-api-deploy.tar.gz
 
 .clerk/
 .agents/
+.vercel

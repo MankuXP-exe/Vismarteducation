@@ -79,68 +79,69 @@ async function ensureChapter(
 }
 
 export async function POST(req: Request) {
-  const supabase = await createRouteClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createRouteClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
 
-  if (!hasTeacherAccess(user, profile)) {
-    return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
-  }
+    if (!hasTeacherAccess(user, profile)) {
+      return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
+    }
 
-  const formData = await req.formData();
-  const batchId = String(formData.get("batchId") || "");
-  const title = String(formData.get("title") || "").trim();
+    const formData = await req.formData();
+    const batchId = String(formData.get("batchId") || "");
+    const title = String(formData.get("title") || "").trim();
 
-  if (!batchId || !title) {
-    return NextResponse.json({ error: "Batch and title are required" }, { status: 400 });
-  }
+    if (!batchId || !title) {
+      return NextResponse.json({ error: "Batch and title are required" }, { status: 400 });
+    }
 
-  const { data: batch } = await supabaseAdmin
-    .from("batches")
-    .select("id")
-    .eq("id", batchId)
-    .maybeSingle();
+    const { data: batch } = await supabaseAdmin
+      .from("batches")
+      .select("id")
+      .eq("id", batchId)
+      .maybeSingle();
 
-  if (!batch) {
-    return NextResponse.json({ error: "Batch not found" }, { status: 404 });
-  }
+    if (!batch) {
+      return NextResponse.json({ error: "Batch not found" }, { status: 404 });
+    }
 
-  const subjectId = await ensureSubject(
-    batchId,
-    (formData.get("subjectId") as string | null) || null,
-    (formData.get("subjectName") as string | null) || null
-  );
-  const chapterId = await ensureChapter(
-    batchId,
-    subjectId,
-    (formData.get("chapterId") as string | null) || null,
-    (formData.get("chapterTitle") as string | null) || null
-  );
+    const subjectId = await ensureSubject(
+      batchId,
+      (formData.get("subjectId") as string | null) || null,
+      (formData.get("subjectName") as string | null) || null
+    );
+    const chapterId = await ensureChapter(
+      batchId,
+      subjectId,
+      (formData.get("chapterId") as string | null) || null,
+      (formData.get("chapterTitle") as string | null) || null
+    );
 
-  formData.set("teacherId", user.id);
-  formData.set("subjectId", subjectId);
-  formData.set("chapterId", chapterId);
+    formData.set("teacherId", user.id);
+    formData.set("subjectId", subjectId);
+    formData.set("chapterId", chapterId);
 
-  const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload/video`, {
-    method: "POST",
-    headers: {
-      "x-api-secret": apiSecret,
-    },
-    body: formData,
-  });
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
+    const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
 
-  const data = await res.json();
-  if (!res.ok) return NextResponse.json(data, { status: res.status });
+    const res = await fetch(`${apiUrl}/upload/video`, {
+      method: "POST",
+      headers: { "x-api-secret": apiSecret },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) return NextResponse.json(data, { status: res.status });
 
   if (!data.lecture && data.videoUrl) {
     const { data: lecture, error } = await supabaseAdmin
@@ -168,4 +169,7 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(data, { status: res.status });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
+  }
 }
