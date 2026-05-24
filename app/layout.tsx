@@ -3,6 +3,7 @@ import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import CookieBanner from "@/components/legal/CookieBanner";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,6 +56,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <CookieBanner />
+          <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
         </AuthProvider>
       </body>
     </html>

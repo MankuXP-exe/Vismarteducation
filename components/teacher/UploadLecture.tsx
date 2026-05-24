@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ImagePlus, UploadCloud } from "lucide-react";
+import toast from "react-hot-toast";
 
 type Props = {
   batchId: string;
@@ -77,11 +78,13 @@ export default function UploadLecture({ batchId, subjects }: Props) {
       setStatus("Uploading directly to VPS...");
       const result = await uploadWithProgress(tokenData.uploadUrl!, tokenData.token, formData, setProgress);
       setStatus(`Lecture saved: ${result.videoUrl || "uploaded"}`);
+      toast.success("Video uploaded successfully!");
       form.reset();
       setSelectedSubject("");
       setCustomSubject("");
     } catch (err: any) {
       setStatus(err.message || "Upload failed");
+      toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
     }
