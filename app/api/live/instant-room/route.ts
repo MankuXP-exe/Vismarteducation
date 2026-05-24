@@ -3,6 +3,40 @@ import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 
+function abbreviationFromName(name: string) {
+  const letters = name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 6)
+    .toUpperCase();
+  return letters || "GEN";
+}
+
+async function ensureSubject(batchId: string, subjectName: string | null) {
+  const name = subjectName?.trim() || "General";
+  const { data: existing } = await supabaseAdmin
+    .from("subjects")
+    .select("id")
+    .eq("batch_id", batchId)
+    .ilike("name", name)
+    .maybeSingle();
+  if (existing?.id) return existing.id;
+  const { data, error } = await supabaseAdmin
+    .from("subjects")
+    .insert({
+      batch_id: batchId,
+      name,
+      abbreviation: abbreviationFromName(name),
+      sort_order: 0,
+      is_active: true,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createRouteClient();
@@ -23,6 +57,8 @@ export async function POST(req: Request) {
     if (!body.batchId) {
       return NextResponse.json({ error: "batchId is required" }, { status: 400 });
     }
+
+    const subjectId = await ensureSubject(body.batchId, body.subjectName || null);
 
     const roomName = `class-${crypto.randomUUID()}`;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
@@ -46,6 +82,7 @@ export async function POST(req: Request) {
       .from("live_classes")
       .insert({
         batch_id: body.batchId,
+        subject_id: subjectId,
         teacher_id: user.id,
         title: body.title || "Instant Live Class",
         description: body.description || "",

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, Upload, Users, Video } from "lucide-react";
+import { CalendarPlus, Upload, Users, Video, Zap } from "lucide-react";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +68,12 @@ export default async function TeacherDashboardPage() {
           </div>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Link href="/teacher/live/start" className="rounded-lg border border-green-200 bg-green-50 p-5 hover:border-green-400">
+          <Zap className="mb-3 h-6 w-6 text-green-600" />
+          <h2 className="font-bold text-gray-900">Start instant live</h2>
+          <p className="text-sm text-gray-500">Choose batch, subject, and go live immediately.</p>
+        </Link>
         <Link href="/teacher/batches" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
           <CalendarPlus className="mb-3 h-6 w-6 text-[#5c35d9]" />
           <h2 className="font-bold text-gray-900">Schedule Live Class</h2>
