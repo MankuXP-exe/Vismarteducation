@@ -7,8 +7,8 @@ import { CalendarPlus, LayoutDashboard, Package, Upload, Video } from "lucide-re
 const links = [
   { href: "/teacher", label: "Overview", icon: LayoutDashboard },
   { href: "/teacher/batches", label: "My Batches", icon: Package },
-  { href: "/teacher/batches/new/upload", label: "Upload", icon: Upload },
-  { href: "/teacher/batches/new/schedule", label: "Schedule", icon: CalendarPlus },
+  { href: "/teacher/batches", label: "Upload", icon: Upload },
+  { href: "/teacher/batches", label: "Schedule", icon: CalendarPlus },
   { href: "/teacher/live/demo", label: "Live Room", icon: Video },
 ];
 

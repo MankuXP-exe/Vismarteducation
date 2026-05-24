@@ -24,15 +24,15 @@ export default function TeacherDashboardPage() {
         ))}
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <Link href="/teacher/batches/new/schedule" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
+        <Link href="/teacher/batches" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
           <CalendarPlus className="mb-3 h-6 w-6 text-[#5c35d9]" />
           <h2 className="font-bold text-gray-900">Schedule Live Class</h2>
-          <p className="text-sm text-gray-500">Create a LiveKit room and notify students.</p>
+          <p className="text-sm text-gray-500">Choose a batch, then create a LiveKit room.</p>
         </Link>
-        <Link href="/teacher/batches/new/upload" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
+        <Link href="/teacher/batches" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
           <Upload className="mb-3 h-6 w-6 text-[#5c35d9]" />
           <h2 className="font-bold text-gray-900">Upload Lecture</h2>
-          <p className="text-sm text-gray-500">Store recordings on the 100GB VPS disk.</p>
+          <p className="text-sm text-gray-500">Choose a batch, then store recordings on the VPS.</p>
         </Link>
         <Link href="/teacher/live/demo" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
           <Video className="mb-3 h-6 w-6 text-[#5c35d9]" />
