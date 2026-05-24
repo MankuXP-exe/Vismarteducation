@@ -80,20 +80,19 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, profile } = useAuth();
   const role = getEffectiveRole(user, profile);
+  const adminItems: NavItem[] = [
+    {
+      label: role === "admin" ? "Admin Panel" : "Teacher Panel",
+      icon: <ShieldCheck size={18} />,
+      href: role === "admin" ? "/admin/users" : "/teacher",
+    },
+  ];
+
   const sections: NavSection[] =
     role === "teacher" || role === "admin"
       ? [
           ...navSections,
-          {
-            title: "ADMIN",
-            items: [
-              {
-                label: role === "admin" ? "Admin Panel" : "Teacher Panel",
-                icon: <ShieldCheck size={18} />,
-                href: role === "admin" ? "/admin/users" : "/teacher",
-              },
-            ],
-          },
+          { title: "ADMIN", items: adminItems },
         ]
       : navSections;
 
