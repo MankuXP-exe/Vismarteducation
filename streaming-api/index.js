@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { spawn, execSync } = require("child_process");
 const { createClient } = require("@supabase/supabase-js");
 const { AccessToken, RoomServiceClient } = require("livekit-server-sdk");
@@ -16,7 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || "127.0.0.1";
 const API_SECRET = process.env.VPS_API_SECRET || process.env.API_SECRET || "replace_with_long_random_secret";
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://vismart.com";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://vismartlearningeducation.com";
 const LIVEKIT_HOST = process.env.LIVEKIT_HOST || process.env.NEXT_PUBLIC_LIVEKIT_URL || "http://127.0.0.1:7880";
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "secret";
@@ -47,7 +48,21 @@ const roomService = new RoomServiceClient(LIVEKIT_HOST.replace(/^wss:/, "https:"
 const activeRecordings = new Map();
 
 app.use(express.json({ limit: "10mb" }));
-app.use(cors({ origin: FRONTEND_URL === "*" ? "*" : [FRONTEND_URL, "http://localhost:3000"], credentials: true }));
+const allowedOrigins = new Set([
+  FRONTEND_URL,
+  "https://vismartlearningeducation.com",
+  "https://www.vismartlearningeducation.com",
+  "http://localhost:3000",
+]);
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin || FRONTEND_URL === "*" || allowedOrigins.has(origin)) return cb(null, true);
+      return cb(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
 
@@ -56,6 +71,38 @@ function requireSecret(req, res, next) {
   if (secret !== API_SECRET) {
     return res.status(401).json({ error: "Invalid API secret" });
   }
+  next();
+}
+
+function verifyUploadToken(token) {
+  if (!token || !token.includes(".")) return null;
+
+  const [body, signature] = token.split(".");
+  const expected = crypto.createHmac("sha256", API_SECRET).update(body).digest("base64url");
+  if (!signature || signature.length !== expected.length) return null;
+
+  if (
+    !crypto.timingSafeEqual(
+      Buffer.from(signature || ""),
+      Buffer.from(expected)
+    )
+  ) {
+    return null;
+  }
+
+  const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+  if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) return null;
+  return payload;
+}
+
+function requireUploadAuth(req, res, next) {
+  const secret = req.headers["x-api-secret"];
+  if (secret === API_SECRET) return next();
+
+  const payload = verifyUploadToken(req.headers["x-upload-token"]);
+  if (!payload) return res.status(401).json({ error: "Invalid or expired upload token" });
+
+  req.uploadAuth = payload;
   next();
 }
 
@@ -230,6 +277,12 @@ const uploadVideo = multer({
   storage: videoStorage,
   limits: { fileSize: 10 * 1024 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
+    if (file.fieldname === "thumbnail") {
+      if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) cb(null, true);
+      else cb(new Error("Only JPG, PNG, or WebP thumbnails are allowed"));
+      return;
+    }
+
     if (["video/mp4", "video/webm", "video/avi", "video/x-msvideo"].includes(file.mimetype)) cb(null, true);
     else cb(new Error("Only video files are allowed"));
   },
@@ -261,7 +314,8 @@ const uploadVideoFields = multer({
   limits: { fileSize: 10 * 1024 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.fieldname === "thumbnail") {
-      cb(null, true);
+      if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) cb(null, true);
+      else cb(new Error("Only JPG, PNG, or WebP thumbnails are allowed"));
     } else if (["video/mp4", "video/webm", "video/avi", "video/x-msvideo"].includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -270,13 +324,19 @@ const uploadVideoFields = multer({
   },
 });
 
-app.post("/upload/video", requireSecret, uploadVideoFields.fields([{ name: "video", maxCount: 1 }, { name: "thumbnail", maxCount: 1 }]), async (req, res) => {
+app.post("/upload/video", requireUploadAuth, uploadVideoFields.fields([{ name: "video", maxCount: 1 }, { name: "thumbnail", maxCount: 1 }]), async (req, res) => {
   const files = req.files;
   const videoFile = files?.["video"]?.[0];
   if (!videoFile) return res.status(400).json({ error: "No video file uploaded" });
 
   try {
-    const { title, batchId, subjectId, chapterId, teacherId, sortOrder, description } = req.body;
+    const uploadAuth = req.uploadAuth || {};
+    const title = req.body.title;
+    const batchId = uploadAuth.batchId || req.body.batchId;
+    const subjectId = uploadAuth.subjectId || req.body.subjectId;
+    const chapterId = uploadAuth.chapterId || req.body.chapterId;
+    const teacherId = uploadAuth.teacherId || req.body.teacherId;
+    const { sortOrder, description } = req.body;
     const duration = await getVideoDuration(videoFile.path);
 
     let thumbUrl = null;

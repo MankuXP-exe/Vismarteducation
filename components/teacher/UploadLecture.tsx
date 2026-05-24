@@ -1,182 +1,199 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { UploadCloud, Loader2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { ImagePlus, UploadCloud } from "lucide-react";
 
-type Subject = { id: string; name: string; abbreviation: string };
-type Chapter = { id: string; title: string; chapter_number: string };
+type Props = {
+  batchId: string;
+  subjects: string[];
+};
 
-export default function UploadLecture({ batchId }: { batchId: string }) {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
+type TokenResponse = {
+  uploadUrl?: string;
+  token?: string;
+  subjectId?: string;
+  chapterId?: string;
+  error?: string;
+};
+
+export default function UploadLecture({ batchId, subjects }: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedChapter, setSelectedChapter] = useState("");
-  const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [customSubject, setCustomSubject] = useState("");
   const [status, setStatus] = useState("");
+  const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    async function loadSubjects() {
-      try {
-        const res = await fetch(`/api/subjects?batchId=${batchId}`);
-        const data = await res.json();
-        setSubjects(data.subjects || []);
-      } catch { /* ignore */ }
-      setLoadingSubjects(false);
-    }
-    loadSubjects();
-  }, [batchId]);
-
-  useEffect(() => {
-    if (!selectedSubject) { setChapters([]); return; }
-    async function loadChapters() {
-      try {
-        const res = await fetch(`/api/chapters?subjectId=${selectedSubject}`);
-        const data = await res.json();
-        setChapters(data.chapters || []);
-      } catch { /* ignore */ }
-    }
-    loadChapters();
-  }, [selectedSubject]);
+  const subjectName = useMemo(
+    () => (selectedSubject === "__custom" ? customSubject.trim() : selectedSubject),
+    [customSubject, selectedSubject]
+  );
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setUploading(true);
-    setStatus("Uploading...");
+    if (!subjectName) {
+      setStatus("Select a subject first.");
+      return;
+    }
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    formData.set("batchId", batchId);
-    if (selectedSubject) formData.set("subjectId", selectedSubject);
-    if (selectedChapter) formData.set("chapterId", selectedChapter);
+    const title = String(formData.get("title") || "").trim();
+    const chapterTitle = String(formData.get("chapterTitle") || "").trim();
+    const video = formData.get("video");
+
+    if (!title || !chapterTitle || !(video instanceof File) || video.size === 0) {
+      setStatus("Video, title, and chapter are required.");
+      return;
+    }
+
+    setUploading(true);
+    setProgress(0);
+    setStatus("Preparing secure upload...");
 
     try {
-      const res = await fetch("/api/upload/video", {
+      const tokenRes = await fetch("/api/upload/video-token", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          batchId,
+          subjectName,
+          chapterTitle,
+          title,
+        }),
       });
+      const tokenData = (await tokenRes.json()) as TokenResponse;
 
-      const data = await res.json();
-      if (res.ok) {
-        setStatus("Lecture saved!");
-        form.reset();
-        setSelectedSubject("");
-        setSelectedChapter("");
-      } else {
-        setStatus(data.error || "Upload failed");
+      if (!tokenRes.ok || !tokenData.uploadUrl || !tokenData.token) {
+        throw new Error(tokenData.error || "Unable to prepare upload");
       }
-    } catch {
-      setStatus("Upload failed");
+
+      formData.set("batchId", batchId);
+      formData.set("subjectName", subjectName);
+      formData.set("subjectId", tokenData.subjectId || "");
+      formData.set("chapterId", tokenData.chapterId || "");
+
+      setStatus("Uploading directly to VPS...");
+      const result = await uploadWithProgress(tokenData.uploadUrl, tokenData.token, formData, setProgress);
+      setStatus(`Saved: ${result.videoUrl || result.lecture?.cloudflare_playback_url || "lecture uploaded"}`);
+      form.reset();
+      setSelectedSubject("");
+      setCustomSubject("");
+    } catch (err: any) {
+      setStatus(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-lg border border-gray-200 bg-white p-5">
-
-      {/* Step 1: Subject */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-        {loadingSubjects ? (
-          <div className="flex items-center gap-2 text-sm text-gray-400"><Loader2 size={14} className="animate-spin" /> Loading subjects...</div>
-        ) : (
+    <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-5">
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-gray-700">Subject</span>
           <select
             value={selectedSubject}
-            onChange={(e) => { setSelectedSubject(e.target.value); setSelectedChapter(""); }}
-            required
+            onChange={(event) => setSelectedSubject(event.target.value)}
             className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm"
           >
             <option value="">Select subject</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+            {subjects.map((subject) => (
+              <option key={subject} value={subject}>
+                {subject}
+              </option>
             ))}
+            <option value="__custom">Add new subject</option>
           </select>
+        </label>
+        {selectedSubject === "__custom" && (
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-gray-700">New subject</span>
+            <input
+              value={customSubject}
+              onChange={(event) => setCustomSubject(event.target.value)}
+              placeholder="Example: Economics"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm"
+            />
+          </label>
         )}
       </div>
 
-      {/* Step 2: Chapter */}
-      {selectedSubject && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Chapter</label>
-          <div className="flex gap-2">
-            <select
-              value={selectedChapter}
-              onChange={(e) => setSelectedChapter(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm"
-            >
-              <option value="">Select chapter (or type new)</option>
-              {chapters.map((c) => (
-                <option key={c.id} value={c.id}>{c.chapter_number}. {c.title}</option>
-              ))}
-            </select>
-            <input
-              name="chapterTitle"
-              placeholder="New chapter name"
-              disabled={!!selectedChapter}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:opacity-40"
-            />
-          </div>
-        </div>
-      )}
+      {subjectName ? (
+        <form ref={formRef} onSubmit={submit} className="space-y-4">
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
+            <UploadCloud className="mb-3 h-8 w-8 text-[#5c35d9]" />
+            <span className="font-semibold text-gray-900">Drop lecture video here</span>
+            <span className="text-sm text-gray-500">MP4, WebM, or AVI</span>
+            <input name="video" type="file" accept="video/*" required className="mt-4 block text-sm" disabled={uploading} />
+          </label>
 
-      {/* Step 3: Details */}
-      {selectedSubject && (
-        <>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Lecture title</label>
-            <input name="title" required placeholder="e.g. Introduction to Accounting" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea name="description" placeholder="Optional description" className="min-h-20 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm" />
-          </div>
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 p-5 text-center">
+            <ImagePlus className="mb-2 h-6 w-6 text-[#5c35d9]" />
+            <span className="font-medium text-gray-900">Optional thumbnail</span>
+            <span className="text-sm text-gray-500">If empty, the VPS will generate one from the video.</span>
+            <input name="thumbnail" type="file" accept="image/png,image/jpeg,image/webp" className="mt-3 block text-sm" disabled={uploading} />
+          </label>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sort order</label>
-              <input name="sortOrder" type="number" placeholder="0" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm" />
-            </div>
+            <input name="title" required placeholder="Lecture title" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" disabled={uploading} />
+            <input name="chapterTitle" required placeholder="Chapter title" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" disabled={uploading} />
+            <input name="sortOrder" type="number" placeholder="Sort order" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" disabled={uploading} />
           </div>
-
-          {/* Video file */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Video file</label>
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center hover:border-[#5c35d9] transition-colors">
-              <UploadCloud className="mb-2 h-8 w-8 text-[#5c35d9]" />
-              <span className="font-semibold text-gray-900">Drop lecture video here</span>
-              <span className="text-sm text-gray-500">MP4, WebM, or AVI up to 10GB</span>
-              <input name="video" type="file" accept="video/*" required className="mt-3 block text-sm" />
-            </label>
-          </div>
-
-          {/* Thumbnail */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail image <span className="text-gray-400 font-normal">(optional — auto-generated from video if not provided)</span></label>
-            <input name="thumbnail" type="file" accept="image/*" className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm file:mr-3 file:rounded file:border-0 file:bg-[#5c35d9] file:px-3 file:py-1 file:text-xs file:text-white" />
-          </div>
-
-          {uploading && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Loader2 size={16} className="animate-spin" /> Uploading lecture... this may take a while for large files.
+          <textarea name="description" placeholder="Description" className="min-h-24 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm" disabled={uploading} />
+          {progress > 0 && (
+            <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+              <div className="h-full bg-[#5c35d9] transition-all" style={{ width: `${progress}%` }} />
             </div>
           )}
-
           <button
-            type="submit"
             disabled={uploading}
-            className="rounded-lg bg-[#5c35d9] px-5 py-3 font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
+            className="rounded-lg bg-[#5c35d9] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploading ? "Uploading..." : "Upload lecture"}
           </button>
-
-          {status && (
-            <p className={`text-sm ${status.includes("saved") || status.includes("Saved") ? "text-green-600" : "text-red-600"}`}>
-              {status}
-            </p>
-          )}
-        </>
+          {status && <p className="text-sm text-gray-600">{status}</p>}
+        </form>
+      ) : (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
+          Select a subject to open the upload form.
+        </div>
       )}
-    </form>
+    </div>
   );
+}
+
+function uploadWithProgress(
+  uploadUrl: string,
+  token: string,
+  formData: FormData,
+  onProgress: (progress: number) => void
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", uploadUrl);
+    xhr.setRequestHeader("x-upload-token", token);
+    xhr.timeout = 30 * 60 * 1000;
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress(Math.max(1, Math.round((event.loaded / event.total) * 100)));
+      }
+    };
+
+    xhr.onload = () => {
+      let data: any = {};
+      try {
+        data = JSON.parse(xhr.responseText || "{}");
+      } catch {
+        data = { error: xhr.responseText };
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data.error || `Upload failed with status ${xhr.status}`));
+    };
+
+    xhr.onerror = () => reject(new Error("Upload failed. Check VPS/CORS/network."));
+    xhr.ontimeout = () => reject(new Error("Upload timed out."));
+    xhr.send(formData);
+  });
 }

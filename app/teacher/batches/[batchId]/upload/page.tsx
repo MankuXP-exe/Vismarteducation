@@ -1,39 +1,14 @@
 import UploadLecture from "@/components/teacher/UploadLecture";
-import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function UploadLecturePage({ params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
-  const { data: batch } = isSupabaseAdminConfigured
-    ? await supabaseAdmin
-        .from("batches")
-        .select("subjects")
-        .eq("id", batchId)
-        .maybeSingle()
-    : { data: null };
-
-  const { data: subjectRows } = isSupabaseAdminConfigured
-    ? await supabaseAdmin
-        .from("subjects")
-        .select("name")
-        .eq("batch_id", batchId)
-        .eq("is_active", true)
-        .order("sort_order")
-    : { data: [] };
-
-  const subjects = Array.from(
-    new Set([
-      ...((batch?.subjects as string[] | null) ?? []),
-      ...((subjectRows ?? []).map((subject) => subject.name) ?? []),
-    ].filter(Boolean))
-  );
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Upload lecture</h1>
-        <p className="text-sm text-gray-500">Video files are stored locally on the VPS.</p>
+        <p className="text-sm text-gray-500">Select a subject and chapter, then upload your video.</p>
       </div>
-      <UploadLecture batchId={batchId} subjects={subjects} />
+      <UploadLecture batchId={batchId} />
     </div>
   );
 }
