@@ -50,7 +50,8 @@ export default function StartInstantLive({ batches }: { batches: Batch[] }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start");
       toast.success("Live class started!");
-      router.push(`/teacher/live/${data.liveClass.id}`);
+      window.open(`/teacher/live/${data.liveClass.id}`, "_blank");
+      router.push(`/teacher/batches/${batchId}`);
     } catch (err: any) {
       toast.error(err.message);
       setLoading(false);

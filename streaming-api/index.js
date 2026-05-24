@@ -635,6 +635,17 @@ app.get("/storage-stats", requireSecret, (req, res) => {
   }
 });
 
+app.post("/live/end-room", requireSecret, async (req, res) => {
+  try {
+    const { roomName } = req.body;
+    if (!roomName) return res.status(400).json({ error: "roomName is required" });
+    await roomService.deleteRoom(roomName);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use("/recordings", express.static(RECORDINGS_DIR, { acceptRanges: true, maxAge: "1h" }));
 app.use("/thumbnails", express.static(THUMBNAILS_DIR, { maxAge: "1d" }));
 app.use("/notes", express.static(NOTES_DIR, { maxAge: "1h" }));
