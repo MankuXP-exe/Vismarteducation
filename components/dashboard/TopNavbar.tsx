@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Bell, ChevronDown, LogOut, User } from "lucide-react";
 import BatchSwitcher from "./BatchSwitcher";
-import { studentData } from "@/lib/student-mock-data";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function TopNavbar() {
@@ -13,9 +12,8 @@ export default function TopNavbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const { user, profile } = useAuth();
 
-  const activeBatch = studentData.enrolledBatches[0];
   const displayName =
-    profile?.full_name || user?.user_metadata?.full_name || studentData.name;
+    profile?.full_name || user?.user_metadata?.full_name || user?.email || "Student";
   const firstName = displayName?.split(" ")[0] || "Student";
 
   return (
@@ -48,7 +46,7 @@ export default function TopNavbar() {
           >
             <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
             <span className="font-medium truncate max-w-[200px] sm:max-w-xs">
-              {activeBatch.title} · {activeBatch.subtitle}
+              My batches
             </span>
             <ChevronDown size={14} className="text-white/60 shrink-0" />
           </button>
