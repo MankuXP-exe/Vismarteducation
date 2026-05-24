@@ -15,6 +15,10 @@ type SubjectRow = {
   sort_order?: number | null;
 };
 
+function normalizeSubjectName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 function subjectColor(subject: SubjectRow) {
   if (subject.color) return subject.color;
   const colors = ["#dbeafe", "#fce7f3", "#d1fae5", "#ede9fe", "#fef3c7", "#e0f2fe"];
@@ -63,12 +67,42 @@ async function getBatchPageData(batchId: string) {
     if (!enrollment) redirect("/dashboard/batches");
   }
 
-  const [batchResult, subjectsResult, materialsResult] = await Promise.all([
-    supabaseAdmin
-      .from("batches")
-      .select("id,title,subtitle,description")
-      .eq("id", batchId)
-      .maybeSingle(),
+  const batchResult = await supabaseAdmin
+    .from("batches")
+    .select("id,title,subtitle,description,subjects")
+    .eq("id", batchId)
+    .maybeSingle();
+
+  if (!batchResult.data) return null;
+
+  const officialSubjects = ((batchResult.data.subjects as string[] | null) ?? []).filter(Boolean);
+  const existingSubjectsResult = await supabaseAdmin
+    .from("subjects")
+    .select("id,name,abbreviation,color,sort_order")
+    .eq("batch_id", batchId)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  const existingNames = new Set(
+    (existingSubjectsResult.data ?? []).map((subject) => normalizeSubjectName(subject.name))
+  );
+  const missingSubjects = officialSubjects.filter(
+    (subject) => !existingNames.has(normalizeSubjectName(subject))
+  );
+
+  if (missingSubjects.length > 0) {
+    await supabaseAdmin.from("subjects").insert(
+      missingSubjects.map((name, index) => ({
+        batch_id: batchId,
+        name,
+        abbreviation: abbreviation({ id: "", name }),
+        sort_order: 100 + index,
+        is_active: true,
+      }))
+    );
+  }
+
+  const [subjectsResult, lecturesResult, materialsResult] = await Promise.all([
     supabaseAdmin
       .from("subjects")
       .select("id,name,abbreviation,color,sort_order")
@@ -76,18 +110,44 @@ async function getBatchPageData(batchId: string) {
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
     supabaseAdmin
+      .from("lectures")
+      .select("subject_id")
+      .eq("batch_id", batchId)
+      .eq("is_active", true),
+    supabaseAdmin
       .from("study_materials")
-      .select("id,title,file_url,file_name,material_type,published_at")
+      .select("id,title,file_url,file_name,material_type,published_at,subject_id")
       .eq("batch_id", batchId)
       .order("published_at", { ascending: false })
       .limit(20),
   ]);
 
-  if (!batchResult.data) return null;
+  const officialNames = new Set(officialSubjects.map(normalizeSubjectName));
+  const contentSubjectIds = new Set<string>();
+  (lecturesResult.data ?? []).forEach((lecture: any) => {
+    if (lecture.subject_id) contentSubjectIds.add(lecture.subject_id);
+  });
+  (materialsResult.data ?? []).forEach((material: any) => {
+    if (material.subject_id) contentSubjectIds.add(material.subject_id);
+  });
+
+  const subjectsByName = new Map<string, SubjectRow>();
+  for (const subject of (subjectsResult.data ?? []) as SubjectRow[]) {
+    const key = normalizeSubjectName(subject.name);
+    const hasContent = contentSubjectIds.has(subject.id);
+    const isOfficial = officialNames.has(key);
+
+    if (!hasContent && !isOfficial) continue;
+
+    const current = subjectsByName.get(key);
+    if (!current || (hasContent && !contentSubjectIds.has(current.id))) {
+      subjectsByName.set(key, subject);
+    }
+  }
 
   return {
     batch: batchResult.data,
-    subjects: (subjectsResult.data ?? []) as SubjectRow[],
+    subjects: Array.from(subjectsByName.values()),
     materials: materialsResult.data ?? [],
   };
 }

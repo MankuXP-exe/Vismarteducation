@@ -309,7 +309,7 @@ const uploadVideoFields = multer({
       if (file.fieldname === "thumbnail") {
         cb(null, THUMBNAILS_DIR);
       } else {
-        const batchId = cleanName(req.body.batchId || "general");
+        const batchId = cleanName(req.uploadAuth?.batchId || req.body.batchId || "general");
         const batchDir = path.join(RECORDINGS_DIR, batchId);
         fs.mkdirSync(batchDir, { recursive: true });
         cb(null, batchDir);

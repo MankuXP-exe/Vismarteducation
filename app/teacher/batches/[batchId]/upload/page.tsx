@@ -8,13 +8,8 @@ export default async function UploadLecturePage({ params }: { params: Promise<{ 
     ? await supabaseAdmin.from("batches").select("subjects").eq("id", batchId).maybeSingle()
     : { data: null };
 
-  const { data: subjectRows } = isSupabaseAdminConfigured
-    ? await supabaseAdmin.from("subjects").select("name").eq("batch_id", batchId).eq("is_active", true).order("sort_order")
-    : { data: [] };
-
   const subjects = Array.from(new Set([
     ...((batch?.subjects as string[] | null) ?? []),
-    ...((subjectRows ?? []).map((s) => s.name)),
   ].filter(Boolean)));
 
   return (

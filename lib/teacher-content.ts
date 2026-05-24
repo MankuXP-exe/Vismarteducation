@@ -20,6 +20,8 @@ export async function ensureSubject(batchId: string, subjectId: string | null, s
     .select("id")
     .eq("batch_id", batchId)
     .ilike("name", name)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (existing?.id) return existing.id;
@@ -55,6 +57,8 @@ export async function ensureChapter(
     .eq("batch_id", batchId)
     .eq("subject_id", subjectId)
     .ilike("title", title)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (existing?.id) return existing.id;

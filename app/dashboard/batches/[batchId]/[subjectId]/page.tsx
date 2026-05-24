@@ -43,6 +43,10 @@ function durationLabel(lecture: LectureRow) {
   return `${minutes} min`;
 }
 
+function normalizeChapterTitle(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "").replace(/^chapter/, "ch");
+}
+
 async function assertAccess(userId: string, batchId: string, user: any) {
   const { data: profile } = await supabaseAdmin
     .from("profiles")
@@ -111,9 +115,31 @@ async function getSubjectPageData(batchId: string, subjectId: string, chapterPar
 
   if (!batchResult.data || !subjectResult.data) return null;
 
-  const chapters = (chaptersResult.data ?? []) as ChapterRow[];
+  const allChapters = (chaptersResult.data ?? []) as ChapterRow[];
+  const lectureCounts = new Map<string, number>();
+  ((lecturesResult.data ?? []) as LectureRow[]).forEach((lecture) => {
+    lectureCounts.set(lecture.chapter_id, (lectureCounts.get(lecture.chapter_id) ?? 0) + 1);
+  });
+
+  const chaptersByTitle = new Map<string, ChapterRow>();
+  for (const chapter of allChapters) {
+    const key = normalizeChapterTitle(chapter.title);
+    const current = chaptersByTitle.get(key);
+    if (!current || (lectureCounts.get(chapter.id) ?? 0) > (lectureCounts.get(current.id) ?? 0)) {
+      chaptersByTitle.set(key, chapter);
+    }
+  }
+
+  const chapters = Array.from(chaptersByTitle.values()).sort((a, b) => {
+    const lectureDelta = (lectureCounts.get(b.id) ?? 0) - (lectureCounts.get(a.id) ?? 0);
+    if (lectureDelta !== 0) return lectureDelta;
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  });
   const selectedChapterId =
-    chapters.find((chapter) => chapter.id === chapterParam)?.id || chapters[0]?.id || "";
+    chapters.find((chapter) => chapter.id === chapterParam)?.id ||
+    chapters.find((chapter) => (lectureCounts.get(chapter.id) ?? 0) > 0)?.id ||
+    chapters[0]?.id ||
+    "";
 
   return {
     batch: batchResult.data,
