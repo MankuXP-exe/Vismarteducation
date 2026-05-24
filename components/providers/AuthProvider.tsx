@@ -64,10 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile, supabase.auth]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut({ scope: "global" });
     setUser(null);
     setProfile(null);
-    window.location.assign("/");
+    window.location.assign("/auth/signout");
   };
 
   return (

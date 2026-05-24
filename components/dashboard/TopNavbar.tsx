@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 export default function TopNavbar() {
   const [batchOpen, setBatchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile } = useAuth();
 
   const activeBatch = studentData.enrolledBatches[0];
   const displayName =
@@ -88,16 +88,13 @@ export default function TopNavbar() {
                   <User size={15} />
                   Profile
                 </Link>
-                <button
-                  onClick={async () => {
-                    await signOut();
-                    setProfileOpen(false);
-                  }}
+                <a
+                  href="/auth/signout"
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <LogOut size={15} />
                   Sign out
-                </button>
+                </a>
               </div>
             )}
           </div>

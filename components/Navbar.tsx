@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Menu, X, ChevronDown, ChevronRight, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,7 +56,6 @@ export default function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const router = useRouter();
   const { user, signOut } = useAuth();
   const isBatchesActive = pathname?.startsWith("/batches");
 
@@ -64,8 +63,6 @@ export default function Navbar() {
     await signOut();
     setProfileOpen(false);
     setMobileOpen(false);
-    router.push("/");
-    router.refresh();
   };
 
   useEffect(() => {
