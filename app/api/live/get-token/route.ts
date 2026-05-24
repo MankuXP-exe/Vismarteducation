@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createRouteClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 
 export async function POST(req: Request) {
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { classId, role } = await req.json();
-    const { data: liveClass } = await supabase
+    const { data: liveClass } = await supabaseAdmin
       .from("live_classes")
       .select("*, batch:batches(title)")
       .eq("id", classId)
@@ -20,8 +21,14 @@ export async function POST(req: Request) {
 
     if (!liveClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, full_name")
+      .eq("id", user.id)
+      .single();
+
     if (role === "student") {
-      const { data: enrollment } = await supabase
+      const { data: enrollment } = await supabaseAdmin
         .from("enrollments")
         .select("id, status")
         .eq("student_id", user.id)
@@ -35,21 +42,10 @@ export async function POST(req: Request) {
     }
 
     if (role === "teacher") {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
       if (!hasTeacherAccess(user, profile)) {
         return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
       }
     }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
     const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
