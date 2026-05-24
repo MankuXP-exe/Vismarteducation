@@ -105,7 +105,7 @@ function generateThumbnail(videoPath, thumbPath) {
       "-i",
       videoPath,
       "-ss",
-      "00:00:05",
+      "00:00:00",
       "-vframes",
       "1",
       "-vf",
@@ -244,20 +244,55 @@ const uploadPdf = multer({
   },
 });
 
-app.post("/upload/video", requireSecret, uploadVideo.single("video"), async (req, res) => {
-  const file = req.file;
-  if (!file) return res.status(400).json({ error: "No video file uploaded" });
+const uploadVideoFields = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      if (file.fieldname === "thumbnail") {
+        cb(null, THUMBNAILS_DIR);
+      } else {
+        const batchId = cleanName(req.body.batchId || "general");
+        const batchDir = path.join(RECORDINGS_DIR, batchId);
+        fs.mkdirSync(batchDir, { recursive: true });
+        cb(null, batchDir);
+      }
+    },
+    filename: (req, file, cb) => cb(null, `${Date.now()}-${cleanName(file.originalname)}`),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === "thumbnail") {
+      cb(null, true);
+    } else if (["video/mp4", "video/webm", "video/avi", "video/x-msvideo"].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only video files are allowed"));
+    }
+  },
+});
+
+app.post("/upload/video", requireSecret, uploadVideoFields.fields([{ name: "video", maxCount: 1 }, { name: "thumbnail", maxCount: 1 }]), async (req, res) => {
+  const files = req.files;
+  const videoFile = files?.["video"]?.[0];
+  if (!videoFile) return res.status(400).json({ error: "No video file uploaded" });
 
   try {
     const { title, batchId, subjectId, chapterId, teacherId, sortOrder, description } = req.body;
-    const duration = await getVideoDuration(file.path);
-    const thumbName = `${Date.now()}-thumb.jpg`;
-    const thumbPath = path.join(THUMBNAILS_DIR, thumbName);
-    await generateThumbnail(file.path, thumbPath);
+    const duration = await getVideoDuration(videoFile.path);
 
-    const stats = fs.statSync(file.path);
-    const videoUrl = publicRecordingUrl(cleanName(batchId || "general"), file.filename);
-    const thumbUrl = publicThumbnailUrl(thumbName);
+    let thumbUrl = null;
+    const thumbnailFile = files?.["thumbnail"]?.[0];
+    if (thumbnailFile) {
+      const thumbName = thumbnailFile.filename;
+      thumbUrl = publicThumbnailUrl(thumbName);
+    } else {
+      const thumbName = `${Date.now()}-thumb.jpg`;
+      const thumbPath = path.join(THUMBNAILS_DIR, thumbName);
+      await generateThumbnail(videoFile.path, thumbPath);
+      thumbUrl = publicThumbnailUrl(thumbName);
+    }
+
+    const stats = fs.statSync(videoFile.path);
+    const videoUrl = publicRecordingUrl(cleanName(batchId || "general"), videoFile.filename);
 
     let lecture = null;
     if (supabase) {
@@ -294,7 +329,7 @@ app.post("/upload/video", requireSecret, uploadVideo.single("video"), async (req
       durationSeconds: duration,
     });
   } catch (err) {
-    if (file?.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    if (videoFile?.path && fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
     res.status(500).json({ error: err.message });
   }
 });
