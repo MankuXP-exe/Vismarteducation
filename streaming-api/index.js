@@ -1,5 +1,11 @@
 require("dotenv").config();
 
+try {
+  global.WebSocket = global.WebSocket || require("ws");
+} catch {
+  // Node 22 has a native WebSocket. Node 20 needs the ws package installed.
+}
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
