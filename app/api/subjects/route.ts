@@ -10,6 +10,7 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createRouteClient();
+
   const { data: subjects } = await supabase
     .from("subjects")
     .select("id, name, abbreviation")
@@ -17,5 +18,18 @@ export async function GET(req: Request) {
     .eq("is_active", true)
     .order("sort_order");
 
-  return NextResponse.json({ subjects: subjects || [] });
+  if (subjects && subjects.length > 0) {
+    return NextResponse.json({ subjects });
+  }
+
+  const { data: batch } = await supabase
+    .from("batches")
+    .select("subjects")
+    .eq("id", batchId)
+    .single();
+
+  const defaultSubjects = (batch?.subjects as string[]) || [];
+  return NextResponse.json({
+    subjects: defaultSubjects.map((name) => ({ id: "", name, abbreviation: "" })),
+  });
 }

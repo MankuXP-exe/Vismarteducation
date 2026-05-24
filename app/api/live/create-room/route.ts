@@ -56,12 +56,23 @@ async function ensureChapter(batchId: string, subjectId: string | null, chapterI
 
   if (existing?.id) return existing.id;
 
+  const { data: maxChapter } = await supabaseAdmin
+    .from("chapters")
+    .select("chapter_number")
+    .eq("batch_id", batchId)
+    .eq("subject_id", subjectId)
+    .order("chapter_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextNumber = maxChapter?.chapter_number ? String(Number(maxChapter.chapter_number) + 1) : "1";
+
   const { data, error } = await supabaseAdmin
     .from("chapters")
     .insert({
       batch_id: batchId,
       subject_id: subjectId,
-      chapter_number: "1",
+      chapter_number: nextNumber,
       title,
       is_active: true,
     })
