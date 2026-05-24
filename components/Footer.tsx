@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Phone, MapPin } from "lucide-react";
 
 const courses = [
-  "Class 9th & 10th",
+  "Class 10th",
+  "Class 9th",
   "Class 11th Science",
   "Class 11th Commerce",
   "Class 12th Science",

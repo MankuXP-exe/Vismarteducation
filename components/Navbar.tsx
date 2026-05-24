@@ -16,7 +16,8 @@ const navLinks = [
 ];
 
 const schoolBatches = [
-  { emoji: "📗", label: "Class 9th & 10th", href: "/batches?category=class-9-10" },
+  { emoji: "📗", label: "Class 10th", href: "/batches?category=class-10" },
+  { emoji: "📗", label: "Class 9th", href: "/batches?category=class-9" },
   { emoji: "📙", label: "Class 11th Science", href: "/batches?category=class-11" },
   { emoji: "📙", label: "Class 11th Commerce", href: "/batches?category=class-11" },
   { emoji: "📕", label: "Class 12th Science", href: "/batches?category=class-12" },

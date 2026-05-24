@@ -20,7 +20,7 @@ insert into public.batches (
   5000, 8000,
   '/images/preview-class12th-batch.png',
   '/images/banner-class12th-batch.png',
-  ARRAY['Physics','Chemistry','Mathematics','Biology'],
+  ARRAY['Physics','Chemistry','Mathematics'],
   'POPULAR', true, true, true, true, 12,
   'Vi Smart Faculty', 'Hindi + English'
 ),
@@ -32,7 +32,7 @@ insert into public.batches (
   5000, 8000,
   '/images/preview-class12th-batch-Accountancy.png',
   '/images/banner-class12th-batch-Accountancy.png',
-  ARRAY['Accountancy','Business Studies','Economics','Mathematics'],
+  ARRAY['Accountancy','Business Studies','Economics'],
   'POPULAR', true, true, true, true, 12,
   'Vi Smart Faculty', 'Hindi'
 ),
@@ -44,7 +44,7 @@ insert into public.batches (
   5000, 8000,
   '/images/preview-class11th-batch.png',
   '/images/banner-class12th-batch.png',
-  ARRAY['Physics','Chemistry','Mathematics','Biology'],
+  ARRAY['Physics','Chemistry','Mathematics'],
   'NEW', true, true, true, true, 12,
   'Vi Smart Faculty', 'Hindi + English'
 ),
@@ -56,15 +56,27 @@ insert into public.batches (
   5000, 8000,
   '/images/preview-class12th-batch-Accountancy.png',
   '/images/banner-class12th-batch-Accountancy.png',
-  ARRAY['Accountancy','Business Studies','Economics','Mathematics'],
+  ARRAY['Accountancy','Business Studies','Economics'],
   'NEW', false, true, true, true, 12,
   'Vi Smart Faculty', 'Hindi'
 ),
 (
-  'class-9-10-2025',
-  'Class 9th & 10th Batch',
+  'class-10-2025',
+  'Class 10th Batch',
   'CBSE Board · 2024-25',
-  'class-9-10', 'All Subjects', '9-10',
+  'class-10', 'All Subjects', '10',
+  4000, 6000,
+  '/images/preview-class11th-batch.png',
+  '/images/banner-class12th-batch.png',
+  ARRAY['Mathematics','Science','English','Social Science'],
+  'POPULAR', false, true, true, true, 12,
+  'Vi Smart Faculty', 'Hindi + English'
+),
+(
+  'class-9-2025',
+  'Class 9th Batch',
+  'CBSE Board · 2024-25',
+  'class-9', 'All Subjects', '9',
   4000, 6000,
   '/images/preview-class11th-batch.png',
   '/images/banner-class12th-batch.png',
