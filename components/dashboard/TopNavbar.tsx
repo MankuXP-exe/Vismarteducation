@@ -36,7 +36,7 @@ export default function TopNavbar() {
             height={32}
             className="h-8 w-8 object-contain rounded-full"
           />
-          <span className="text-white font-bold text-sm hidden sm:block">Vi Smart</span>
+          <span className="text-white font-bold text-sm hidden sm:block">Vi Smart Learning Education</span>
         </Link>
 
         {/* CENTER — Active Batch Selector */}

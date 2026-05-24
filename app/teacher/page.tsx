@@ -1,12 +1,57 @@
 import Link from "next/link";
 import { CalendarPlus, Upload, Users, Video } from "lucide-react";
+import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 
-export default function TeacherDashboardPage() {
+export const dynamic = "force-dynamic";
+
+async function getTeacherDashboardData() {
+  if (!isSupabaseAdminConfigured) {
+    return {
+      batchCount: 0,
+      studentCount: 0,
+      upcomingCount: 0,
+      lectureCount: 0,
+      upcomingClasses: [],
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [batches, students, upcoming, lectures, upcomingList] = await Promise.all([
+    supabaseAdmin.from("batches").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student"),
+    supabaseAdmin
+      .from("live_classes")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["scheduled", "live"])
+      .gte("scheduled_at", today.toISOString()),
+    supabaseAdmin.from("lectures").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabaseAdmin
+      .from("live_classes")
+      .select("id,title,scheduled_at,status")
+      .in("status", ["scheduled", "live"])
+      .gte("scheduled_at", today.toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(5),
+  ]);
+
+  return {
+    batchCount: batches.count ?? 0,
+    studentCount: students.count ?? 0,
+    upcomingCount: upcoming.count ?? 0,
+    lectureCount: lectures.count ?? 0,
+    upcomingClasses: upcomingList.data ?? [],
+  };
+}
+
+export default async function TeacherDashboardPage() {
+  const data = await getTeacherDashboardData();
   const cards = [
-    { label: "My Batches", value: "6" },
-    { label: "Total Students", value: "428" },
-    { label: "Upcoming Live Classes", value: "4" },
-    { label: "Lectures Uploaded", value: "132" },
+    { label: "My Batches", value: data.batchCount },
+    { label: "Total Students", value: data.studentCount },
+    { label: "Upcoming Live Classes", value: data.upcomingCount },
+    { label: "Lectures Uploaded", value: data.lectureCount },
   ];
 
   return (
@@ -34,20 +79,28 @@ export default function TeacherDashboardPage() {
           <h2 className="font-bold text-gray-900">Upload Lecture</h2>
           <p className="text-sm text-gray-500">Choose a batch, then store recordings on the VPS.</p>
         </Link>
-        <Link href="/teacher/live/demo" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
+        <Link href="/teacher/batches" className="rounded-lg border border-gray-200 bg-white p-5 hover:border-[#5c35d9]">
           <Video className="mb-3 h-6 w-6 text-[#5c35d9]" />
           <h2 className="font-bold text-gray-900">Open Live Room</h2>
-          <p className="text-sm text-gray-500">Start a class with camera, mic, chat, and screen share.</p>
+          <p className="text-sm text-gray-500">Open a scheduled class from its batch link.</p>
         </Link>
       </div>
       <div className="rounded-lg border border-gray-200 bg-white p-5">
         <h2 className="mb-4 font-bold text-gray-900">Upcoming classes</h2>
-        {["Accountancy - Partnership Basics", "Maths - Differentiation", "Economics - Demand"].map((item) => (
-          <div key={item} className="flex items-center justify-between border-t border-gray-100 py-3 text-sm">
-            <span className="font-medium text-gray-800">{item}</span>
-            <span className="text-gray-500">Today</span>
-          </div>
-        ))}
+        {data.upcomingClasses.length === 0 ? (
+          <p className="border-t border-gray-100 py-4 text-sm text-gray-500">No live classes scheduled.</p>
+        ) : (
+          data.upcomingClasses.map((item) => (
+            <Link
+              key={item.id}
+              href={`/teacher/live/${item.id}`}
+              className="flex items-center justify-between border-t border-gray-100 py-3 text-sm hover:text-[#5c35d9]"
+            >
+              <span className="font-medium">{item.title}</span>
+              <span className="text-gray-500">{new Date(item.scheduled_at).toLocaleString("en-IN")}</span>
+            </Link>
+          ))
+        )}
       </div>
     </div>
   );

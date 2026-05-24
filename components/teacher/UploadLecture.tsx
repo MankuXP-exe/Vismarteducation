@@ -22,7 +22,11 @@ export default function UploadLecture({ batchId }: { batchId: string }) {
 
     setProgress(100);
     const data = await res.json();
-    setStatus(res.ok ? `Saved: ${data.videoUrl || data.lecture?.video_url}` : data.error || "Upload failed");
+    setStatus(
+      res.ok
+        ? `Saved: ${data.videoUrl || data.lecture?.cloudflare_playback_url}`
+        : data.error || "Upload failed"
+    );
   }
 
   return (
@@ -35,8 +39,8 @@ export default function UploadLecture({ batchId }: { batchId: string }) {
       </label>
       <div className="grid gap-4 md:grid-cols-2">
         <input name="title" required placeholder="Lecture title" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
-        <input name="subjectId" required placeholder="Subject ID" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
-        <input name="chapterId" required placeholder="Chapter ID" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
+        <input name="subjectName" required placeholder="Subject name" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
+        <input name="chapterTitle" required placeholder="Chapter title" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
         <input name="sortOrder" type="number" placeholder="Sort order" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
       </div>
       <textarea name="description" placeholder="Description" className="min-h-24 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm" />

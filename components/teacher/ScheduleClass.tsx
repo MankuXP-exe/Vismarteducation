@@ -16,8 +16,8 @@ export default function ScheduleClass({ batchId }: { batchId: string }) {
       body: JSON.stringify({
         batchId,
         title: formData.get("title"),
-        subjectId: formData.get("subjectId"),
-        chapterId: formData.get("chapterId"),
+        subjectName: formData.get("subjectName"),
+        chapterTitle: formData.get("chapterTitle"),
         scheduledAt,
         durationMinutes: Number(formData.get("durationMinutes")),
         description: formData.get("description"),
@@ -32,8 +32,8 @@ export default function ScheduleClass({ batchId }: { batchId: string }) {
     <form onSubmit={submit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-5">
       <input name="title" required placeholder="Class title" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm" />
       <div className="grid gap-4 md:grid-cols-2">
-        <input name="subjectId" placeholder="Subject ID" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
-        <input name="chapterId" placeholder="Chapter ID" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
+        <input name="subjectName" placeholder="Subject name" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
+        <input name="chapterTitle" placeholder="Chapter title" className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
         <input name="date" type="date" required className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
         <input name="time" type="time" required className="rounded-lg border border-gray-300 px-4 py-3 text-sm" />
       </div>

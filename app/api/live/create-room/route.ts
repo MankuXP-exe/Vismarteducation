@@ -1,6 +1,76 @@
 import { NextResponse } from "next/server";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { hasTeacherAccess } from "@/lib/auth/roles";
+
+function abbreviationFromName(name: string) {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 6)
+    .toUpperCase() || "GEN";
+}
+
+async function ensureSubject(batchId: string, subjectId?: string, subjectName?: string) {
+  if (subjectId) return subjectId;
+  const name = subjectName?.trim();
+  if (!name) return null;
+
+  const { data: existing } = await supabaseAdmin
+    .from("subjects")
+    .select("id")
+    .eq("batch_id", batchId)
+    .ilike("name", name)
+    .maybeSingle();
+
+  if (existing?.id) return existing.id;
+
+  const { data, error } = await supabaseAdmin
+    .from("subjects")
+    .insert({
+      batch_id: batchId,
+      name,
+      abbreviation: abbreviationFromName(name),
+      is_active: true,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
+
+async function ensureChapter(batchId: string, subjectId: string | null, chapterId?: string, chapterTitle?: string) {
+  if (chapterId) return chapterId;
+  const title = chapterTitle?.trim();
+  if (!title || !subjectId) return null;
+
+  const { data: existing } = await supabaseAdmin
+    .from("chapters")
+    .select("id")
+    .eq("batch_id", batchId)
+    .eq("subject_id", subjectId)
+    .ilike("title", title)
+    .maybeSingle();
+
+  if (existing?.id) return existing.id;
+
+  const { data, error } = await supabaseAdmin
+    .from("chapters")
+    .insert({
+      batch_id: batchId,
+      subject_id: subjectId,
+      chapter_number: "1",
+      title,
+      is_active: true,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
 
 export async function POST(req: Request) {
   try {
@@ -17,11 +87,17 @@ export async function POST(req: Request) {
       .eq("id", user.id)
       .single();
 
-    if (profile?.role !== "teacher" && profile?.role !== "admin") {
+    if (!hasTeacherAccess(user, profile)) {
       return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
     }
 
     const body = await req.json();
+    if (!body.batchId || !body.title || !body.scheduledAt) {
+      return NextResponse.json({ error: "Batch, title, and schedule time are required" }, { status: 400 });
+    }
+
+    const subjectId = await ensureSubject(body.batchId, body.subjectId, body.subjectName);
+    const chapterId = await ensureChapter(body.batchId, subjectId, body.chapterId, body.chapterTitle);
     const roomName = body.roomName || `class-${crypto.randomUUID()}`;
 
     const roomRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/live/create-room`, {
@@ -40,8 +116,8 @@ export async function POST(req: Request) {
       .from("live_classes")
       .insert({
         batch_id: body.batchId,
-        subject_id: body.subjectId || null,
-        chapter_id: body.chapterId || null,
+        subject_id: subjectId,
+        chapter_id: chapterId,
         teacher_id: user.id,
         title: body.title,
         description: body.description,

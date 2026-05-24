@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createRouteClient } from "@/lib/supabase/server";
+import { hasTeacherAccess } from "@/lib/auth/roles";
 
 export async function POST(req: Request) {
   try {
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
         .select("role")
         .eq("id", user.id)
         .single();
-      if (profile?.role !== "teacher" && profile?.role !== "admin") {
+      if (!hasTeacherAccess(user, profile)) {
         return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
       }
     }

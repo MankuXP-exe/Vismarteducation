@@ -9,7 +9,7 @@ const links = [
   { href: "/teacher/batches", label: "My Batches", icon: Package },
   { href: "/teacher/batches", label: "Upload", icon: Upload },
   { href: "/teacher/batches", label: "Schedule", icon: CalendarPlus },
-  { href: "/teacher/live/demo", label: "Live Room", icon: Video },
+  { href: "/teacher/batches", label: "Live Room", icon: Video },
 ];
 
 export default function TeacherSidebar() {

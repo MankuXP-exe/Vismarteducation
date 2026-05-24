@@ -10,13 +10,20 @@ import {
   Bookmark,
   X,
   Star,
+  User,
 } from "lucide-react";
 import { studentData } from "@/lib/student-mock-data";
+import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 
 export default function StudyPage() {
   const [alertDismissed, setAlertDismissed] = useState(false);
   const router = useRouter();
+  const { profile, user } = useAuth();
+
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || studentData.name;
+  const userClass = profile?.current_class || user?.user_metadata?.current_class || "";
+  const userXp = profile?.xp_points ?? studentData.xp;
 
   const hasExpiredBatch = studentData.enrolledBatches.some(
     (b) => b.status === "expired"
@@ -57,10 +64,22 @@ export default function StudyPage() {
     >
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Study</h1>
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-[#5c35d9]/10 flex items-center justify-center">
+              <User size={16} className="text-[#5c35d9]" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
+              {userClass && (
+                <p className="text-xs text-gray-500">{userClass}</p>
+              )}
+            </div>
+          </div>
+        </div>
         <span className="flex items-center gap-1.5 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
           <Star size={14} className="fill-purple-500 text-purple-500" />
-          {studentData.xp} XP
+          {userXp} XP
         </span>
       </div>
 
