@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
 
@@ -66,10 +66,14 @@ export default function ConcessionPage() {
       formData.append("userId", user.id);
       formData.append("concessionType", type);
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
       const res = await fetch("/api/concession/upload", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
@@ -96,7 +100,10 @@ export default function ConcessionPage() {
     setResult(null);
   }
 
-  if (authLoading) {
+  const [authTimeout, setAuthTimeout] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setAuthTimeout(true), 5000); return () => clearTimeout(t); }, []);
+
+  if (authLoading && !authTimeout) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="animate-spin h-10 w-10 border-4 border-purple-500 border-t-transparent rounded-full" />
@@ -207,6 +214,9 @@ export default function ConcessionPage() {
             <div className="animate-spin h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4" />
             <p className="text-gray-700 font-medium">Processing your document...</p>
             <p className="text-sm text-gray-400 mt-1">Running OCR verification</p>
+            <button onClick={() => { setProcessing(false); setStep("upload"); }} className="mt-6 text-sm text-purple-600 hover:underline">
+              Cancel
+            </button>
           </div>
         )}
 
