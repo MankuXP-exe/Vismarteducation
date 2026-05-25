@@ -14,6 +14,7 @@ import {
   Clock,
   HelpCircle,
   Bookmark,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,11 +52,16 @@ const navSections: NavSection[] = [
         icon: <Package size={18} />,
         href: "/dashboard/batches",
       },
-      {
-        label: "My Tests",
-        icon: <ClipboardList size={18} />,
-        href: "/dashboard/tests",
-      },
+  {
+    label: "My Tests",
+    icon: <ClipboardList size={18} />,
+    href: "/dashboard/tests",
+  },
+  {
+    label: "Study Materials",
+    icon: <FileText size={18} />,
+    href: "/dashboard/materials",
+  },
     ],
   },
   {
