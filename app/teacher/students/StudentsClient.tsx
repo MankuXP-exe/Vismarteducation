@@ -13,6 +13,7 @@ import {
   Mail,
   Phone,
   Calendar,
+  ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -56,6 +57,20 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
+function RoleBadge({ role }: { role: string }) {
+  const colors: Record<string, string> = {
+    student: "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20",
+    teacher: "bg-purple-50 text-purple-700 ring-1 ring-purple-600/20",
+    admin: "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${colors[role] || "bg-gray-50 text-gray-600"}`}>
+      <ShieldCheck className="h-3 w-3" />
+      {role}
+    </span>
+  );
+}
+
 function BatchTag({ title, status }: { title: string; status: string }) {
   return (
     <span
@@ -82,6 +97,27 @@ function StudentRow({
   onToggle: () => void;
 }) {
   const studentEnrollments = enrollments.filter((e) => e.studentId === student.id);
+  const [changingRole, setChangingRole] = useState(false);
+
+  async function changeRole(newRole: string) {
+    if (!confirm(`Change ${student.name}'s role to "${newRole}"?`)) return;
+    setChangingRole(true);
+    try {
+      const res = await fetch("/api/admin/change-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: student.id, newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Role changed to ${newRole}`);
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setChangingRole(false);
+    }
+  }
 
   return (
     <>
@@ -126,6 +162,9 @@ function StudentRow({
         <td className="px-4 py-3">
           <StatusBadge active={student.isActive} />
         </td>
+        <td className="px-4 py-3">
+          <RoleBadge role={student.role} />
+        </td>
         <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell whitespace-nowrap">
           {student.createdAt
             ? new Date(student.createdAt).toLocaleDateString("en-IN", {
@@ -143,38 +182,58 @@ function StudentRow({
           )}
         </td>
       </tr>
-      {isExpanded && studentEnrollments.length > 0 && (
+      {isExpanded && (
         <tr className="bg-gray-50/80">
-          <td colSpan={8} className="px-4 py-3">
-            <div className="text-sm">
-              <p className="font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                <GraduationCap className="h-4 w-4 text-purple-500" />
-                Enrollment Details
-              </p>
-              <div className="space-y-1.5">
-                {studentEnrollments.map((e) => (
-                  <div
-                    key={e.batchId}
-                    className="flex items-center justify-between rounded-md bg-white px-3 py-2 border border-gray-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <BatchTag title={e.batchTitle} status={e.status} />
-                      <span
-                        className={`text-xs font-medium ${
-                          e.status === "active" ? "text-blue-600" : "text-gray-500"
-                        }`}
-                      >
-                        {e.status}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {e.enrolledAt
-                        ? new Date(e.enrolledAt).toLocaleDateString("en-IN")
-                        : "—"}
-                    </span>
-                  </div>
-                ))}
+          <td colSpan={9} className="px-4 py-3">
+            <div className="flex flex-col gap-3 text-sm">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-gray-700 flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-purple-500" />
+                  Change Role
+                </p>
+                <div className="flex gap-2">
+                  {["student", "teacher", "admin"].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => changeRole(r)}
+                      disabled={changingRole || r === student.role}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                        r === student.role
+                          ? "bg-purple-100 text-purple-700 cursor-default"
+                          : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                      }`}
+                    >
+                      {r === student.role ? `✓ ${r}` : `Make ${r}`}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {studentEnrollments.length > 0 && (
+                <>
+                  <p className="font-medium text-gray-700 flex items-center gap-1.5 mt-2">
+                    <GraduationCap className="h-4 w-4 text-purple-500" />
+                    Enrollment Details
+                  </p>
+                  <div className="space-y-1.5">
+                    {studentEnrollments.map((e) => (
+                      <div
+                        key={e.batchId}
+                        className="flex items-center justify-between rounded-md bg-white px-3 py-2 border border-gray-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <BatchTag title={e.batchTitle} status={e.status} />
+                          <span className={`text-xs font-medium ${e.status === "active" ? "text-blue-600" : "text-gray-500"}`}>
+                            {e.status}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {e.enrolledAt ? new Date(e.enrolledAt).toLocaleDateString("en-IN") : "—"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </td>
         </tr>
@@ -191,7 +250,28 @@ function MobileStudentCard({
   enrollments: Enrollment[];
 }) {
   const [open, setOpen] = useState(false);
+  const [changingRole, setChangingRole] = useState(false);
   const studentEnrollments = enrollments.filter((e) => e.studentId === student.id);
+
+  async function changeRole(newRole: string) {
+    if (!confirm(`Change ${student.name}'s role to "${newRole}"?`)) return;
+    setChangingRole(true);
+    try {
+      const res = await fetch("/api/admin/change-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: student.id, newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Role changed to ${newRole}`);
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setChangingRole(false);
+    }
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -207,7 +287,10 @@ function MobileStudentCard({
         </div>
         <StatusBadge active={student.isActive} />
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+      <div className="mt-2">
+        <RoleBadge role={student.role} />
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
         {student.phone && (
           <span className="flex items-center gap-1">
             <Phone className="h-3 w-3 text-gray-400" />
@@ -226,6 +309,22 @@ function MobileStudentCard({
             ? new Date(student.createdAt).toLocaleDateString("en-IN")
             : "—"}
         </span>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {["student", "teacher", "admin"].map((r) => (
+          <button
+            key={r}
+            onClick={() => changeRole(r)}
+            disabled={changingRole || r === student.role}
+            className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+              r === student.role
+                ? "bg-purple-100 text-purple-700 cursor-default"
+                : "border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+            }`}
+          >
+            {r === student.role ? `✓ ${r}` : r}
+          </button>
+        ))}
       </div>
       {studentEnrollments.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
@@ -344,6 +443,7 @@ export default function StudentsClient({
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Class</th>
                 <th className="px-4 py-3 font-semibold hidden md:table-cell">Enrolled Batches</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Role</th>
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Joined</th>
                 <th className="px-4 py-3 font-semibold w-8"></th>
               </tr>
