@@ -1,5 +1,6 @@
 export type Batch = {
   id: string;
+  uuid: string;
   title: string;
   category: string;
   stream: string;
@@ -44,6 +45,7 @@ export function toBatchDisplay(row: any): Batch {
 
   return {
     id: row.slug || row.id,
+    uuid: row.id,
     title: row.title,
     category: row.category,
     stream: row.stream || "All Subjects",

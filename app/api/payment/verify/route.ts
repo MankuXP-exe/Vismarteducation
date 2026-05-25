@@ -24,15 +24,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
     }
 
-    let { data: batch } = await supabaseAdmin
+    const { data: batch } = await supabaseAdmin
       .from("batches")
       .select("id, duration_months, title")
-      .eq("slug", batchId)
-      .maybeSingle();
-    if (!batch) {
-      const r = await supabaseAdmin.from("batches").select("id, duration_months, title").eq("id", batchId).single();
-      batch = r.data;
-    }
+      .eq("id", batchId)
+      .single();
 
     const actualBatchId = batch?.id || batchId;
 

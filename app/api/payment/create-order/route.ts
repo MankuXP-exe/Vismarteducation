@@ -13,15 +13,11 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { batchId, discountType } = await req.json();
-    let { data: batch } = await supabase
+    const { data: batch } = await supabaseAdmin
       .from("batches")
       .select("*")
-      .eq("slug", batchId)
-      .maybeSingle();
-    if (!batch) {
-      const r = await supabase.from("batches").select("*").eq("id", batchId).single();
-      batch = r.data;
-    }
+      .eq("id", batchId)
+      .single();
 
     if (!batch) return NextResponse.json({ error: "Batch not found" }, { status: 404 });
 

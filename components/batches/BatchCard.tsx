@@ -37,7 +37,7 @@ export default function BatchCard({ batch, index }: BatchCardProps) {
       const res = await fetch("/api/payment/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchId: batch.id }),
+        body: JSON.stringify({ batchId: batch.uuid }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -63,7 +63,7 @@ export default function BatchCard({ batch, index }: BatchCardProps) {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              batchId: batch.id,
+              batchId: batch.uuid,
             }),
           });
           setPaying(false);
