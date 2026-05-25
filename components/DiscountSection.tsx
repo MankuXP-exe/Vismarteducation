@@ -89,7 +89,7 @@ export default function DiscountSection() {
               <h3 className="text-lg font-bold text-gray-900">{d.title}</h3>
               <p className="text-gray-600 text-sm leading-relaxed">{d.desc}</p>
               <a
-                href="#contact"
+                href="/concession"
                 className="inline-flex items-center gap-1 text-sm font-semibold text-[#5c35d9] hover:underline mt-auto"
               >
                 Apply Now →
