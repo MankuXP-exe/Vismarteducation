@@ -145,6 +145,12 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
+    fetch(`${apiUrl}/record/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
+      body: JSON.stringify({ roomName, liveClassId: liveClass.id, batchId: body.batchId, title: body.title }),
+    }).catch(() => {});
+
     notifyBatchStudents(
       body.batchId,
       profile?.full_name || "Teacher",

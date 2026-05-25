@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CheckCircle, FileText, Play } from "lucide-react";
+import { ArrowLeft, CheckCircle, FileText, Play, Upload } from "lucide-react";
 import { getEffectiveRole } from "@/lib/auth/roles";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
@@ -25,6 +25,8 @@ type LectureRow = {
   duration_label?: string | null;
   duration_seconds?: number | null;
   published_at?: string | null;
+  lecture_type?: string | null;
+  video_url?: string | null;
 };
 
 function formatDate(value?: string | null) {
@@ -74,7 +76,7 @@ async function getLecturePageData(batchId: string, subjectId: string, lectureId:
     supabaseAdmin
       .from("lectures")
       .select(
-        "id,batch_id,subject_id,chapter_id,title,description,cloudflare_playback_url,cloudflare_thumbnail_url,duration_label,duration_seconds,published_at"
+        "id,batch_id,subject_id,chapter_id,title,description,cloudflare_playback_url,cloudflare_thumbnail_url,duration_label,duration_seconds,published_at,lecture_type,video_url"
       )
       .eq("id", lectureId)
       .eq("batch_id", batchId)
@@ -116,7 +118,7 @@ export default async function LecturePage({
 
   if (!data) notFound();
 
-  const videoUrl = data.lecture.cloudflare_playback_url;
+  const videoUrl = data.lecture.cloudflare_playback_url || data.lecture.video_url;
 
   return (
     <div className="-m-8 flex h-[calc(100vh-56px)] overflow-hidden bg-[#f7f8fc]">
@@ -147,7 +149,11 @@ export default async function LecturePage({
                   <Play size={36} className="ml-1 text-white" />
                 </div>
                 <p className="text-lg font-semibold text-white/80">{data.lecture.title}</p>
-                <p className="mt-2 text-sm text-white/40">Video URL is missing for this lecture.</p>
+                <p className="mt-2 text-sm text-white/40">
+                  {data.lecture.lecture_type === "live_recording"
+                    ? "Recording is being processed. Check back later."
+                    : "No video uploaded for this lecture yet."}
+                </p>
               </div>
             )}
           </div>

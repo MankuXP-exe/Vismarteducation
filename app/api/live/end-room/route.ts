@@ -73,24 +73,80 @@ export async function POST(req: Request) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
     const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
 
+    // Stop VPS recording and delete LiveKit room
     if (liveClass.hms_room_id) {
+      await fetch(`${apiUrl}/record/stop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
+        body: JSON.stringify({ roomName: liveClass.hms_room_id }),
+      }).catch(() => {});
+
       await fetch(`${apiUrl}/live/end-room`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-secret": apiSecret,
-        },
+        headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
         body: JSON.stringify({ roomName: liveClass.hms_room_id }),
       }).catch(() => {});
     }
 
+    // Wait briefly for recording to finalize
+    await new Promise((r) => setTimeout(r, 1500));
+
+    // Check if recording was saved
+    let recordingUrl = "";
+    let thumbnailUrl = "";
+    if (liveClass.hms_room_id) {
+      const statusRes = await fetch(`${apiUrl}/record/status/${liveClass.hms_room_id}`, {
+        headers: { "x-api-secret": apiSecret },
+      }).catch(() => null);
+      if (statusRes && statusRes.ok) {
+        const statusData = await statusRes.json();
+        if (statusData.isRecording) {
+          await fetch(`${apiUrl}/record/stop`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
+            body: JSON.stringify({ roomName: liveClass.hms_room_id }),
+          }).catch(() => {});
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+      // Check if file exists via list endpoint
+      const listRes = await fetch(`${apiUrl}/record/list/${liveClass.batch_id}`, {
+        headers: { "x-api-secret": apiSecret },
+      }).catch(() => null);
+      if (listRes && listRes.ok) {
+        const listData = await listRes.json();
+        const match = (listData.recordings || []).find((r: any) =>
+          r.fileName && r.fileName.includes(liveClass.id.replace(/-/g, ""))
+        );
+        if (match) {
+          recordingUrl = match.url;
+        }
+      }
+    }
+
+    // Update live class status
+    const updateData: any = {
+      status: "completed",
+      ended_at: new Date().toISOString(),
+    };
+    if (recordingUrl) {
+      updateData.recording_url = recordingUrl;
+      updateData.is_recording_available = true;
+    }
+
+    await supabaseAdmin
+      .from("live_classes")
+      .update(updateData)
+      .eq("id", classId);
+
+    // Create lecture entry if subject exists
     if (liveClass.subject_id) {
       let chapterId = liveClass.chapter_id;
       if (!chapterId) {
         chapterId = await ensureChapterRecord(liveClass.batch_id, liveClass.subject_id);
       }
 
-      await supabaseAdmin.from("lectures").insert({
+      const lectureData: any = {
         batch_id: liveClass.batch_id,
         subject_id: liveClass.subject_id,
         chapter_id: chapterId,
@@ -100,20 +156,16 @@ export async function POST(req: Request) {
         lecture_type: "live_recording",
         is_active: true,
         published_at: new Date().toISOString(),
-      });
+      };
+
+      if (recordingUrl) {
+        lectureData.video_url = recordingUrl;
+      }
+
+      await supabaseAdmin.from("lectures").insert(lectureData);
     }
 
-    const { error } = await supabaseAdmin
-      .from("live_classes")
-      .update({
-        status: "completed",
-        ended_at: new Date().toISOString(),
-      })
-      .eq("id", classId);
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, recordingUrl: recordingUrl || null });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
