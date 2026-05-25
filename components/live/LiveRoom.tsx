@@ -18,7 +18,7 @@ type Props = {
   role: "teacher" | "student";
 };
 
-function YouTubeStage() {
+function TeacherStage() {
   const tracks = useTracks([
     Track.Source.Camera,
     Track.Source.ScreenShare,
@@ -81,6 +81,41 @@ function YouTubeStage() {
           >
             <RotateCw className="h-5 w-5" />
           </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentStage() {
+  const tracks = useTracks([
+    Track.Source.Camera,
+    Track.Source.ScreenShare,
+    Track.Source.Microphone,
+  ]);
+
+  const screenShare = tracks.find((t) => t.source === Track.Source.ScreenShare);
+  const cameras = tracks.filter((t) => t.source === Track.Source.Camera);
+  const mainTrack = screenShare || cameras[0];
+
+  return (
+    <div className="flex h-full w-full flex-col bg-black">
+      {/* YouTube-style watermark */}
+      <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2">
+        <div className="rounded bg-black/60 px-2.5 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
+          LIVE
+        </div>
+      </div>
+      <div className="relative flex-1 overflow-hidden">
+        {mainTrack ? (
+          <FocusLayout trackRef={mainTrack} className="h-full w-full" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-white/60 text-lg">
+            <div className="text-center">
+              <div className="mx-auto mb-4 h-12 w-12 animate-pulse rounded-full border-4 border-purple-500 border-t-transparent" />
+              <p>Stream will start shortly...</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -178,14 +213,16 @@ export default function LiveRoom({ classId, role }: Props) {
     );
   }
 
-  const videoOptions = role === "teacher"
+  const isTeacher = role === "teacher";
+
+  const videoOptions = isTeacher
     ? {
         resolution: VideoPresets.h1080.resolution,
         facingMode: "user" as const,
       }
     : false;
 
-  const roomOptions = role === "teacher"
+  const roomOptions = isTeacher
     ? {
         dynacast: true,
         publishDefaults: {
@@ -200,7 +237,10 @@ export default function LiveRoom({ classId, role }: Props) {
           resolution: VideoPresets.h1080.resolution,
         },
       }
-    : undefined;
+    : {
+        // Student: just receive, don't publish anything
+        dynacast: true,
+      };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
@@ -223,9 +263,9 @@ export default function LiveRoom({ classId, role }: Props) {
         onConnected={() => setConnected(true)}
         onDisconnected={() => toast.error("Disconnected from live stream")}
       >
-        <YouTubeStage />
+        {isTeacher ? <TeacherStage /> : <StudentStage />}
         <RoomAudioRenderer />
-        {role === "teacher" && (
+        {isTeacher ? (
           <button
             onClick={stopLive}
             disabled={ending}
@@ -233,6 +273,11 @@ export default function LiveRoom({ classId, role }: Props) {
           >
             {ending ? "Ending..." : "Stop Live"}
           </button>
+        ) : (
+          <div className="fixed bottom-4 left-4 z-[70] flex items-center gap-2 rounded-lg bg-black/60 px-3 py-1.5 text-xs text-white/70 backdrop-blur-sm">
+            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            Live
+          </div>
         )}
       </LiveKitRoom>
     </div>
