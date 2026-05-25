@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       case "delete": {
         const { error } = await supabaseAdmin
           .from("lectures")
-          .update({ is_active: false })
+          .delete()
           .eq("id", recordingId);
 
         if (error) throw error;
