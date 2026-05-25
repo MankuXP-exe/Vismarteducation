@@ -324,6 +324,7 @@ export default function BatchDetailPage({
 }) {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const router = useRouter();
 
   useEffect(() => {
@@ -347,7 +348,6 @@ export default function BatchDetailPage({
 
   if (!batch) notFound();
 
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const savings = batch.originalPrice - batch.price;
   const discount = Math.round(
     ((batch.originalPrice - batch.price) / batch.originalPrice) * 100
