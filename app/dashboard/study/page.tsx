@@ -60,7 +60,7 @@ export default function StudyPage() {
 
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">My Learning</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {learningCards.map((card) => (
             <motion.div
               key={card.id}

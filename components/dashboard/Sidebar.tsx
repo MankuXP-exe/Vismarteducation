@@ -11,7 +11,10 @@ import {
   Gift,
   ShieldCheck,
   Sparkles,
+  Menu,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getEffectiveRole } from "@/lib/auth/roles";
 
@@ -80,6 +83,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, profile } = useAuth();
   const role = getEffectiveRole(user, profile);
+  const [open, setOpen] = useState(false);
+
   const adminItems: NavItem[] = [
     {
       label: role === "admin" ? "Admin Panel" : "Teacher Panel",
@@ -109,11 +114,8 @@ export default function Sidebar() {
     return pathname === href;
   };
 
-  return (
-    <aside
-      className="fixed left-0 top-[56px] h-[calc(100vh-56px)] w-[200px] bg-white border-r border-[#f0f0f0] overflow-y-auto z-30 flex flex-col"
-    >
-      {/* Vi Smart branding strip */}
+  const sidebarContent = (
+    <>
       <div className="px-4 py-3 border-b border-[#f0f0f0]">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-[#5c35d9] flex items-center justify-center">
@@ -135,6 +137,7 @@ export default function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-150 relative ${
                     active
                       ? "bg-[#ede9ff] text-[#5c35d9] font-semibold border-r-2 border-[#5c35d9]"
@@ -156,6 +159,30 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="fixed left-0 top-[56px] hidden h-[calc(100vh-56px)] w-[200px] border-r border-[#f0f0f0] bg-white overflow-y-auto z-30 flex-col lg:flex">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {open && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <aside className="relative h-full w-64 border-r border-[#f0f0f0] bg-white overflow-y-auto shadow-lg pt-14">
+            <div className="absolute right-3 top-3">
+              <button onClick={() => setOpen(false)} aria-label="Close menu">
+                <X size={20} />
+              </button>
+            </div>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

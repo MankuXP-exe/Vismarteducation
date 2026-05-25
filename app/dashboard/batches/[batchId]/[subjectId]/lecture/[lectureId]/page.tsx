@@ -132,9 +132,9 @@ export default async function LecturePage({
   const videoUrl = data.lecture.cloudflare_playback_url || data.lecture.video_url;
 
   return (
-    <div className="-m-8 flex h-[calc(100vh-56px)] overflow-hidden bg-[#f7f8fc]">
+    <div className="-mx-4 -mb-8 flex flex-col overflow-hidden bg-[#f7f8fc] lg:-m-8 lg:h-[calc(100vh-56px)] lg:flex-row">
       <main className="flex-1 overflow-y-auto">
-        <div className="px-6 pb-10 pt-5">
+        <div className="px-4 pb-10 pt-5 lg:px-6">
           <Link
             href={`/dashboard/batches/${batchId}/${subjectId}?chapter=${data.lecture.chapter_id}`}
             className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900"
@@ -214,7 +214,7 @@ export default async function LecturePage({
         </div>
       </main>
 
-      <aside className="w-[340px] shrink-0 overflow-hidden border-l border-gray-200 bg-white">
+      <aside className="w-full shrink-0 overflow-hidden border-t border-gray-200 bg-white lg:w-[340px] lg:border-l lg:border-t-0">
         <div className="border-b border-gray-100 px-4 py-4">
           <h2 className="text-sm font-bold text-gray-900">All Lectures</h2>
         </div>

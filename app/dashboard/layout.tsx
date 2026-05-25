@@ -15,20 +15,10 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="min-h-screen" style={{ background: "#f7f8fc" }}>
-      {/* Fixed Top Navbar */}
       <TopNavbar />
-
-      {/* Fixed Left Sidebar */}
       <Sidebar />
-
-      {/* Main Scrollable Content */}
       <main
-        style={{
-          marginLeft: "200px",
-          marginTop: "56px",
-          minHeight: "calc(100vh - 56px)",
-          padding: "32px",
-        }}
+        className="min-h-[calc(100vh-56px)] p-4 pt-[72px] lg:ml-[200px] lg:p-8 lg:pt-[72px]"
       >
         {children}
       </main>

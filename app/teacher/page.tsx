@@ -60,7 +60,7 @@ export default async function TeacherDashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900">Teacher dashboard</h1>
         <p className="text-sm text-gray-500">Manage live classes, recordings, notes, and batches.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
         {cards.map((card) => (
           <div key={card.label} className="rounded-lg border border-gray-200 bg-white p-5">
             <p className="text-sm text-gray-500">{card.label}</p>
@@ -68,7 +68,7 @@ export default async function TeacherDashboardPage() {
           </div>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <Link href="/teacher/live/start" className="rounded-lg border border-green-200 bg-green-50 p-5 hover:border-green-400">
           <Zap className="mb-3 h-6 w-6 text-green-600" />
           <h2 className="font-bold text-gray-900">Start instant live</h2>

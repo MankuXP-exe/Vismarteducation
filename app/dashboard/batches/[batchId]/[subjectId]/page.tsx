@@ -186,8 +186,8 @@ export default async function SubjectPage({
         <p className="mt-1 text-sm text-gray-500">{data.batch.title}</p>
       </div>
 
-      <div className="flex gap-6">
-        <aside className="w-[260px] shrink-0">
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <aside className="w-full shrink-0 lg:w-[260px]">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
             All Chapters
           </p>
