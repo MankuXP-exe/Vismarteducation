@@ -22,176 +22,84 @@ export type Batch = {
   };
 };
 
-export const batches: Batch[] = [
-  {
-    id: "class-11-science",
-    title: "Class 11th Science Batch",
-    category: "class-11",
-    stream: "Science",
-    subjects: ["Physics", "Chemistry", "Mathematics", "Biology"],
-    duration: "1 Year",
-    price: 5000,
-    originalPrice: 8000,
-    image: "/images/preview-class11th-batch.png",
-    banner: "/images/banner-class12th-batch.png",
-    teacher: "Vi Smart Faculty",
-    students: 85,
-    rating: 4.8,
-    badge: "POPULAR",
-    type: ["Live", "Recorded"],
-    includes: ["Notes", "PDFs", "Doubt Sessions"],
-    discount: { army: 50, disabled: 50, singleParent: "₹5000 flat" },
-  },
-  {
-    id: "class-12-science",
-    title: "Class 12th Science Batch",
-    category: "class-12",
-    stream: "Science",
-    subjects: ["Physics", "Chemistry", "Mathematics", "Biology"],
-    duration: "1 Year",
-    price: 5000,
-    originalPrice: 8000,
-    image: "/images/preview-class12th-batch.png",
-    banner: "/images/banner-class12th-batch.png",
-    teacher: "Vi Smart Faculty",
-    students: 120,
-    rating: 4.9,
-    badge: "POPULAR",
-    type: ["Live", "Recorded"],
-    includes: ["Notes", "PDFs", "Doubt Sessions"],
-    discount: { army: 50, disabled: 50, singleParent: "₹5000 flat" },
-  },
-  {
-    id: "class-12-accountancy",
-    title: "Class 12th Commerce Batch",
-    category: "class-12",
-    stream: "Commerce",
-    subjects: ["Accountancy", "Business Studies", "Economics"],
-    duration: "1 Year",
-    price: 5000,
-    originalPrice: 8000,
-    image: "/images/preview-class12th-batch-Accountancy.png",
-    banner: "/images/banner-class12th-batch-Accountancy.png",
-    teacher: "Vi Smart Faculty",
-    students: 95,
-    rating: 4.7,
-    badge: "NEW",
-    type: ["Live", "Recorded"],
-    includes: ["Notes", "PDFs", "Doubt Sessions"],
-    discount: { army: 50, disabled: 50, singleParent: "₹5000 flat" },
-  },
-  {
-    id: "class-11-commerce",
-    title: "Class 11th Commerce Batch",
-    category: "class-11",
-    stream: "Commerce",
-    subjects: ["Accountancy", "Business Studies", "Economics"],
-    duration: "1 Year",
-    price: 5000,
-    originalPrice: 8000,
-    image: "/images/preview-class12th-batch-Accountancy.png",
-    teacher: "Vi Smart Faculty",
-    students: 60,
-    rating: 4.6,
-    badge: "NEW",
-    type: ["Live", "Recorded"],
-    includes: ["Notes", "PDFs", "Doubt Sessions"],
-    discount: { army: 50, disabled: 50, singleParent: "₹5000 flat" },
-  },
-  {
-    id: "class-10",
-    title: "Class 10th Batch",
-    category: "class-10",
-    stream: "All Subjects",
-    subjects: ["Mathematics", "Science", "English", "Social Science"],
-    duration: "1 Year",
-    price: 4000,
-    originalPrice: 6000,
-    image: "/images/preview-class11th-batch.png",
-    teacher: "Vi Smart Faculty",
-    students: 75,
-    rating: 4.7,
-    badge: "POPULAR",
-    type: ["Live", "Recorded"],
-    includes: ["Notes", "PDFs"],
-    discount: { army: 50, disabled: 50, singleParent: "₹5000 flat" },
-  },
-  {
-    id: "class-9",
-    title: "Class 9th Batch",
-    category: "class-9",
-    stream: "All Subjects",
-    subjects: ["Mathematics", "Science", "English", "Social Science"],
-    duration: "1 Year",
-    price: 4000,
-    originalPrice: 6000,
-    image: "/images/preview-class11th-batch.png",
-    teacher: "Vi Smart Faculty",
-    students: 75,
-    rating: 4.7,
-    badge: "POPULAR",
-    type: ["Live", "Recorded"],
-    includes: ["Notes", "PDFs"],
-    discount: { army: 50, disabled: 50, singleParent: "₹5000 flat" },
-  },
-  {
-    id: "tally-gst",
-    title: "Tally Prime ERP9 + GST",
-    category: "accounting",
-    stream: "Accounting",
-    subjects: ["Tally Prime ERP9", "GST Filing", "Registration"],
-    duration: "3 Months",
-    price: 3000,
-    originalPrice: 5000,
-    image: "/images/preview-class12th-batch-Accountancy.png",
-    teacher: "Vi Smart Faculty",
-    students: 45,
-    rating: 4.8,
-    badge: "HOT",
-    type: ["Recorded"],
-    includes: ["Practice Files", "Certificate"],
-    discount: {},
-  },
-  {
-    id: "income-tax",
-    title: "Income Tax Return + TDS/TCS",
-    category: "accounting",
-    stream: "Accounting",
-    subjects: ["Income Tax Return", "TDS", "TCS", "Balance Sheet"],
-    duration: "2 Months",
-    price: 2500,
-    originalPrice: 4000,
-    image: "/images/preview-class12th-batch-Accountancy.png",
-    teacher: "Vi Smart Faculty",
-    students: 38,
-    rating: 4.9,
-    badge: "HOT",
-    type: ["Recorded"],
-    includes: ["Practice Files", "Certificate"],
-    discount: {},
-  },
-  {
-    id: "dca-adca",
-    title: "DCA / ADCA Computer Course",
-    category: "accounting",
-    stream: "Computer",
-    subjects: ["Basic Computer", "MS Office", "Internet", "DCA", "ADCA"],
-    duration: "6 Months",
-    price: 3500,
-    originalPrice: 6000,
-    image: "/images/preview-class11th-batch.png",
-    teacher: "Vi Smart Faculty",
-    students: 52,
-    rating: 4.6,
-    badge: "NEW",
-    type: ["Live", "Recorded"],
-    includes: ["Practice Lab", "Certificate"],
-    discount: {},
-  },
-];
+export function toBatchDisplay(row: any): Batch {
+  const months = row.duration_months || 12;
+  const p = Number(row.price) || 0;
+  const op = row.original_price ? Number(row.original_price) : Math.round(p * 1.5);
 
-export function getBatchById(id: string): Batch | undefined {
-  return batches.find((b) => b.id === id);
+  const typeArr: string[] = [];
+  if (row.has_live_classes !== false) typeArr.push("Live");
+  if (row.has_recorded_lectures !== false) typeArr.push("Recorded");
+  if (typeArr.length === 0) typeArr.push("Recorded");
+
+  const includesArr: string[] = [];
+  if (row.has_notes !== false) includesArr.push("Notes");
+  if (row.has_doubt_support !== false) includesArr.push("Doubt Sessions");
+  if (row.has_tests) includesArr.push("Tests");
+
+  const discount: Batch["discount"] = {};
+  if (row.army_discount_percent) discount.army = row.army_discount_percent;
+  if (row.disabled_discount_percent) discount.disabled = row.disabled_discount_percent;
+  if (row.single_parent_flat_price) discount.singleParent = `₹${Number(row.single_parent_flat_price).toLocaleString("en-IN")} flat`;
+
+  return {
+    id: row.slug || row.id,
+    title: row.title,
+    category: row.category,
+    stream: row.stream || "All Subjects",
+    subjects: row.subjects || [],
+    duration: months >= 12
+      ? `${months / 12} Year${months > 12 ? "s" : ""}`
+      : `${months} Month${months > 1 ? "s" : ""}`,
+    price: p,
+    originalPrice: op,
+    image: row.thumbnail_url || "/images/preview-class11th-batch.png",
+    banner: row.banner_url || row.thumbnail_url,
+    teacher: row.teacher_name || "Vi Smart Faculty",
+    students: row.total_students || 0,
+    rating: Number(row.rating) || 4.5,
+    badge: (row.badge as Batch["badge"]) || (row.is_featured ? "POPULAR" : "NEW"),
+    type: typeArr,
+    includes: includesArr.length > 0 ? includesArr : ["Notes", "PDFs"],
+    discount,
+  };
+}
+
+export async function fetchActiveBatches(supabase: any): Promise<Batch[]> {
+  const { data, error } = await supabase
+    .from("batches")
+    .select("*")
+    .eq("is_active", true)
+    .order("is_featured", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("Failed to fetch batches:", error);
+    return [];
+  }
+  return data.map(toBatchDisplay);
+}
+
+export async function fetchBatchBySlug(supabase: any, slug: string): Promise<Batch | null> {
+  const { data, error } = await supabase
+    .from("batches")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return toBatchDisplay(data);
+}
+
+export async function fetchBatchById(supabase: any, id: string): Promise<Batch | null> {
+  const { data, error } = await supabase
+    .from("batches")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return toBatchDisplay(data);
 }
 
 export const categories = [

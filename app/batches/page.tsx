@@ -12,13 +12,26 @@ import FilterBar from "@/components/batches/FilterBar";
 import BatchGrid from "@/components/batches/BatchGrid";
 import DiscountBanner from "@/components/batches/DiscountBanner";
 import EmptyState from "@/components/batches/EmptyState";
-import { batches } from "@/lib/batches-data";
+import { fetchActiveBatches, categories } from "@/lib/batches-data";
+import type { Batch } from "@/lib/batches-data";
+import { createClient } from "@/lib/supabase/client";
 
 type SortOption = "newest" | "price-asc" | "price-desc";
 
 function BatchesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    fetchActiveBatches(supabase).then((data) => {
+      setBatches(data);
+      setLoading(false);
+    });
+  }, []);
 
   const initialCategory = searchParams.get("category") || "all";
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -89,7 +102,12 @@ function BatchesContent() {
 
       {/* Grid Section */}
       <section className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-6 md:py-10">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-10 h-10 border-4 border-[#5c35d9]/30 border-t-[#5c35d9] rounded-full animate-spin" />
+            <p className="mt-4 text-sm text-gray-500">Loading batches...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <EmptyState onReset={() => handleCategoryChange("all")} />
         ) : (
           <>

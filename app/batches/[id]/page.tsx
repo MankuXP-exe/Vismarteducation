@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Star,
@@ -19,8 +19,9 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { getBatchById } from "@/lib/batches-data";
+import { fetchBatchBySlug } from "@/lib/batches-data";
 import type { Batch } from "@/lib/batches-data";
+import { createClient } from "@/lib/supabase/client";
 
 /* ──────────────── TYPES ──────────────── */
 type TabId = "overview" | "subjects" | "schedule" | "faculty" | "faq";
@@ -322,7 +323,30 @@ export default function BatchDetailPage({
 }: {
   params: { id: string };
 }) {
-  const batch = getBatchById(params.id);
+  const [batch, setBatch] = useState<Batch | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    fetchBatchBySlug(supabase, params.id).then((d) => {
+      setBatch(d);
+      setLoading(false);
+    });
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen bg-[#f8f9ff] flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-[#5c35d9]/30 border-t-[#5c35d9] rounded-full animate-spin" />
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   if (!batch) notFound();
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
