@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { label: "About Us", href: "/about" },
-  { label: "Study Material", href: "/#study-material" },
+  { label: "Study Area", href: "/dashboard/study" },
   { label: "Results", href: "/#results" },
   { label: "Contact", href: "/contact" },
 ];
