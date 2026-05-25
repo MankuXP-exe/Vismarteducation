@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2, Save } from "lucide-react";
 
-const CATEGORIES = ["JEE", "NEET", "Class 11-12", "Class 9-10", "Foundation"];
-const STREAMS = ["", "PCM", "PCB", "PCMB", "Commerce", "Arts"];
-const CLASS_LEVELS = ["9", "10", "11", "12", "Dropper", "Other"];
+const CATEGORIES = ["JEE", "NEET", "Class 11-12", "Class 9-10", "Foundation", "CA", "B.COM", "BBA", "CUET", "NDA"];
+const STREAMS = ["", "PCM", "PCB", "PCMB", "Commerce", "Arts", "CA Foundation"];
+const CLASS_LEVELS = ["9th", "10th", "11th", "12th", "Dropper", "CA Foundation", "B.COM", "BBA", "Other"];
 
 type Batch = {
   id: string;
