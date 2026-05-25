@@ -6,6 +6,7 @@ import { getEffectiveRole } from "@/lib/auth/roles";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import LectureRecordingUpload from "@/components/dashboard/LectureRecordingUpload";
+import LectureVideoPlayer from "@/components/dashboard/LectureVideoPlayer";
 
 export const dynamic = "force-dynamic";
 
@@ -145,14 +146,11 @@ export default async function LecturePage({
 
           <div className="aspect-video overflow-hidden rounded-xl bg-gray-900 shadow-lg">
             {videoUrl ? (
-              <video
+              <LectureVideoPlayer
                 src={videoUrl}
                 poster={data.lecture.cloudflare_thumbnail_url || undefined}
-                controls
-                preload="metadata"
-                playsInline
-                controlsList="nodownload"
-                className="h-full w-full"
+                lectureId={lectureId}
+                lectureTitle={data.lecture.title}
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center text-white/60">

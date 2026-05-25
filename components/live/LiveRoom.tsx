@@ -9,9 +9,10 @@ import {
 import { Track, VideoPresets, createLocalVideoTrack } from "livekit-client";
 import "@livekit/components-styles";
 import toast from "react-hot-toast";
-import { RotateCw, Mic, MicOff, Camera, CameraOff, MonitorUp } from "lucide-react";
+import { RotateCw, Mic, MicOff, Camera, CameraOff, MonitorUp, Star } from "lucide-react";
 import LiveRecording from "./LiveRecording";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
+import { useXP } from "@/hooks/useXP";
 
 type Props = {
   classId: string;
@@ -194,6 +195,16 @@ export default function LiveRoom({ classId, role }: Props) {
   const [classStatus, setClassStatus] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const router = useRouter();
+  const { awardXP } = useXP();
+  const xpAwardedRef = useRef(false);
+
+  // Award XP when student successfully connects to the room
+  useEffect(() => {
+    if (connected && role === "student" && !xpAwardedRef.current) {
+      xpAwardedRef.current = true;
+      awardXP("live_class", { classId });
+    }
+  }, [connected, role, awardXP, classId]);
 
   useEffect(() => {
     async function init() {
@@ -225,6 +236,7 @@ export default function LiveRoom({ classId, role }: Props) {
       setToken(data.token);
       setServerUrl(data.livekitUrl);
       setLoading(false);
+      setConnected(true);
     }
     init();
   }, [classId, role]);
@@ -241,6 +253,7 @@ export default function LiveRoom({ classId, role }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to end class");
       toast.success("Live class ended");
+      awardXP("live_class", { classId });
       router.push("/teacher");
     } catch (err: any) {
       toast.error(err.message);

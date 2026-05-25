@@ -1,17 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bookmark, Clock, HelpCircle, Package, Star, User } from "lucide-react";
+import { Package, Clock, HelpCircle, Bookmark, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
+import XPDashboard from "@/components/dashboard/XPDashboard";
 
 export default function StudyPage() {
   const router = useRouter();
   const { profile, user } = useAuth();
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "Student";
-  const userClass = profile?.current_class || user?.user_metadata?.current_class || "";
-  const userXp = profile?.xp_points ?? 0;
 
   const learningCards = [
     {
@@ -49,12 +48,10 @@ export default function StudyPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
-            {userClass && <p className="text-xs text-gray-500">{userClass}</p>}
           </div>
         </div>
         <span className="flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-700">
-          <Star size={14} className="fill-purple-500 text-purple-500" />
-          {userXp} XP
+          <XPDashboard />
         </span>
       </div>
 
@@ -77,6 +74,11 @@ export default function StudyPage() {
             </motion.div>
           ))}
         </div>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">XP & Gamification</h2>
+        <XPDashboard />
       </section>
 
       <section className="mb-8">
