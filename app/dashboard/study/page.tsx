@@ -5,6 +5,7 @@ import { Package, Clock, HelpCircle, Bookmark, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import XPDashboard from "@/components/dashboard/XPDashboard";
+import { MiniXPBadge } from "@/components/dashboard/MiniXPBadge";
 
 export default function StudyPage() {
   const router = useRouter();
@@ -50,9 +51,7 @@ export default function StudyPage() {
             <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
           </div>
         </div>
-        <span className="flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-700">
-          <XPDashboard />
-        </span>
+        <MiniXPBadge />
       </div>
 
       <section className="mb-8">
