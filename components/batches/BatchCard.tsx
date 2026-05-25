@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Star, Users, Clock, Video, FileText, BookOpen } from "lucide-react";
+import { Star, Users, Clock, Video, FileText, BookOpen, Loader2 } from "lucide-react";
 import type { Batch } from "@/lib/batches-data";
 
 interface BatchCardProps {
@@ -22,10 +24,48 @@ const discountPercent = (price: number, original: number) =>
   Math.round(((original - price) / original) * 100);
 
 export default function BatchCard({ batch, index }: BatchCardProps) {
+  const [paying, setPaying] = useState(false);
+  const router = useRouter();
   const savings = batch.originalPrice - batch.price;
   const discount = discountPercent(batch.price, batch.originalPrice);
   // Cap stagger delay so cards don't animate slowly on mobile
   const delay = Math.min(index * 0.06, 0.3);
+
+  async function handleEnroll() {
+    setPaying(true);
+    try {
+      const res = await fetch("/api/payment/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batchId: batch.id }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        if (res.status === 401) { router.push("/login"); return; }
+        alert(err.error || "Failed to create order");
+        return;
+      }
+      const data = await res.json();
+      const options: any = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "Vi Smart Learning Education",
+        description: data.batchTitle,
+        order_id: data.orderId,
+        prefill: { contact: "", email: "" },
+        theme: { color: "#5c35d9" },
+        handler: () => { router.push("/dashboard/batches"); },
+        modal: { ondismiss: () => setPaying(false) },
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", () => setPaying(false));
+      rzp.open();
+    } catch {
+      alert("Something went wrong. Please try again.");
+      setPaying(false);
+    }
+  }
 
   return (
     <motion.div
@@ -148,14 +188,21 @@ export default function BatchCard({ batch, index }: BatchCardProps) {
         </div>
 
         {/* CTA — large tap target */}
-        <Link
-          href={`/batches/${batch.id}`}
+        <button
+          onClick={handleEnroll}
+          disabled={paying}
           id={`enroll-${batch.id}`}
-          className="block w-full text-center py-3 sm:py-3 bg-[#5c35d9] hover:bg-[#4a28b8] active:bg-[#3b1f99] text-white font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-purple-200 text-sm sm:text-base"
+          className="block w-full text-center py-3 sm:py-3 bg-[#5c35d9] hover:bg-[#4a28b8] active:bg-[#3b1f99] text-white font-bold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-purple-200 text-sm sm:text-base disabled:opacity-70"
           style={{ minHeight: "44px", lineHeight: "1.2" }}
         >
-          Enroll Now
-        </Link>
+          {paying ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 size={16} className="animate-spin" /> Opening...
+            </span>
+          ) : (
+            "Enroll Now"
+          )}
+        </button>
 
         {/* Guarantee */}
         <p className="text-center text-[11px] text-red-500 italic font-medium">
