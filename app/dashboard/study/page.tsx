@@ -28,7 +28,7 @@ export default function StudyPage() {
       bg: "#fff8ee",
       title: "Recent Learning",
       subtitle: "View your watched lectures",
-      href: "/dashboard/study/recent",
+      href: "/dashboard/recent-learning",
     },
     {
       id: "card-my-doubts",
@@ -36,7 +36,7 @@ export default function StudyPage() {
       bg: "#efffef",
       title: "My Doubts",
       subtitle: "View doubts asked from lectures",
-      href: "/dashboard/study/doubts",
+      href: "/dashboard/doubts",
     },
   ];
 
@@ -87,7 +87,7 @@ export default function StudyPage() {
             id="card-bookmarks"
             whileHover={{ y: -2, boxShadow: "0 8px 30px rgba(0,0,0,0.08)" }}
             transition={{ duration: 0.15 }}
-            onClick={() => router.push("/dashboard/study/bookmarks")}
+            onClick={() => router.push("/dashboard/bookmarks")}
             className="cursor-pointer rounded-xl border border-gray-100 bg-white p-6 transition-all duration-200"
           >
             <div className="mb-4">
