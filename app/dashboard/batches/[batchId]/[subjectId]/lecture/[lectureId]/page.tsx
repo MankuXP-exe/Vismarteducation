@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle, FileText, Play, Upload } from "lucide-react";
 import { getEffectiveRole } from "@/lib/auth/roles";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import LectureRecordingUpload from "@/components/dashboard/LectureRecordingUpload";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,12 @@ async function getLecturePageData(batchId: string, subjectId: string, lectureId:
 
   await assertAccess(user.id, batchId, user);
 
+  const { data: profileData } = await supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const [lectureResult, lecturesResult, materialsResult] = await Promise.all([
     supabaseAdmin
       .from("lectures")
@@ -101,10 +108,14 @@ async function getLecturePageData(batchId: string, subjectId: string, lectureId:
   const lecture = lectureResult.data as LectureRow | null;
   if (!lecture) return null;
 
+  const role = getEffectiveRole(user, profileData);
+  const canManage = role === "teacher" || role === "admin";
+
   return {
     lecture,
     lectures: (lecturesResult.data ?? []) as LectureRow[],
     materials: materialsResult.data ?? [],
+    canManage,
   };
 }
 
@@ -154,6 +165,9 @@ export default async function LecturePage({
                     ? "Recording is being processed. Check back later."
                     : "No video uploaded for this lecture yet."}
                 </p>
+                {data.canManage && (
+                  <LectureRecordingUpload lectureId={lectureId} batchId={batchId} />
+                )}
               </div>
             )}
           </div>
