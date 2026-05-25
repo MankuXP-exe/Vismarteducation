@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   LiveKitRoom, useTracks, FocusLayout,
   RoomAudioRenderer, useLocalParticipant,
@@ -16,6 +15,7 @@ import {
   Loader2, Signal, Wifi,
 } from "lucide-react";
 import LiveRecording from "./LiveRecording";
+import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import { useXP } from "@/hooks/useXP";
 
 type Props = { classId: string; role: "teacher" | "student" };
@@ -212,10 +212,9 @@ export default function LiveRoom({ classId, role }: Props) {
   const router = useRouter();
   const { awardXP } = useXP();
   const xpAwardedRef = useRef(false);
-  const supabase = useRef(createClient());
-
   const checkClassStatus = useCallback(async () => {
-    const { data } = await supabase.current
+    if (!isSupabaseAdminConfigured) return false;
+    const { data } = await supabaseAdmin
       .from("live_classes")
       .select("status")
       .eq("id", classId)
