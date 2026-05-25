@@ -13,6 +13,7 @@ import {
   Sparkles,
   Menu,
   X,
+  Percent,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -70,6 +71,12 @@ const navSections: NavSection[] = [
   {
     title: "MORE",
     items: [
+      {
+        label: "Fee Concession",
+        icon: <Percent size={18} />,
+        href: "/concession",
+        badge: "NEW",
+      },
       {
         label: "Refer & Earn",
         icon: <Gift size={18} />,

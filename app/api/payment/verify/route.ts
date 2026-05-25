@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     const { data: payment } = await supabaseAdmin
       .from("payments")
-      .select("amount, discount_type, discount_amount")
+      .select("amount, discount_type, discount_amount, concession_id")
       .eq("razorpay_order_id", razorpay_order_id)
       .single();
 
@@ -63,6 +63,7 @@ export async function POST(req: Request) {
           status: "active",
           access_start_date: new Date().toISOString(),
           access_end_date: accessEndDate.toISOString(),
+          concession_id: payment?.concession_id || null,
         },
         { onConflict: "student_id,batch_id" }
       )
@@ -70,6 +71,18 @@ export async function POST(req: Request) {
       .single();
 
     if (error) throw error;
+
+    // Mark concession as applied if one was used
+    if (payment?.concession_id) {
+      await supabaseAdmin
+        .from("concession_requests")
+        .update({
+          is_active: false,
+          applied_at: new Date().toISOString(),
+          applied_to_enrollment_id: enrollment.id,
+        })
+        .eq("id", payment.concession_id);
+    }
 
     await supabaseAdmin.from("notifications").insert({
       user_id: user.id,
