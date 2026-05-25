@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { Bot, X, Send, Sparkles, Loader2 } from "lucide-react";
 import { getDailyTip } from "@/lib/ai-assistant";
 
@@ -19,6 +20,10 @@ const SUGGESTIONS = [
 ];
 
 export default function AIAssistant() {
+  const pathname = usePathname();
+  const hideOn = pathname?.includes("/live/") || pathname?.includes("/lecture/");
+  if (hideOn) return null;
+
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: getDailyTip(), source: "tip" },
