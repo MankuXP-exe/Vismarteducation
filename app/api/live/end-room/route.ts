@@ -3,19 +3,7 @@ import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 
-async function ensureChapterRecord(batchId: string, subjectId: string) {
-  const { data: existing } = await supabaseAdmin
-    .from("chapters")
-    .select("id")
-    .eq("batch_id", batchId)
-    .eq("subject_id", subjectId)
-    .eq("is_active", true)
-    .order("chapter_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existing?.id) return existing.id;
-
+async function ensureChapterRecord(batchId: string, subjectId: string, title?: string) {
   const { data: maxChapter } = await supabaseAdmin
     .from("chapters")
     .select("chapter_number")
@@ -26,6 +14,7 @@ async function ensureChapterRecord(batchId: string, subjectId: string) {
     .maybeSingle();
 
   const nextNumber = maxChapter?.chapter_number ? String(Number(maxChapter.chapter_number) + 1) : "1";
+  const chapterTitle = title || `Chapter ${nextNumber}`;
 
   const { data, error } = await supabaseAdmin
     .from("chapters")
@@ -33,7 +22,7 @@ async function ensureChapterRecord(batchId: string, subjectId: string) {
       batch_id: batchId,
       subject_id: subjectId,
       chapter_number: nextNumber,
-      title: `Chapter ${nextNumber}`,
+      title: chapterTitle,
       is_active: true,
     })
     .select("id")
@@ -64,7 +53,7 @@ export async function POST(req: Request) {
 
     const { data: liveClass } = await supabaseAdmin
       .from("live_classes")
-      .select("id, hms_room_id, status, batch_id, subject_id, chapter_id, title, description, teacher_id")
+      .select("id, hms_room_id, status, batch_id, subject_id, chapter_id, title, description, teacher_id, recording_url")
       .eq("id", classId)
       .single();
 
@@ -94,7 +83,11 @@ export async function POST(req: Request) {
     // Check if recording was saved
     let recordingUrl = "";
     let thumbnailUrl = "";
-    if (liveClass.hms_room_id) {
+
+    // Use recording_url saved on the live_class if available (set by create-room/instant-room)
+    if (liveClass.recording_url) {
+      recordingUrl = liveClass.recording_url;
+    } else if (liveClass.hms_room_id) {
       const statusRes = await fetch(`${apiUrl}/record/status/${liveClass.hms_room_id}`, {
         headers: { "x-api-secret": apiSecret },
       }).catch(() => null);
@@ -109,14 +102,15 @@ export async function POST(req: Request) {
           await new Promise((r) => setTimeout(r, 1000));
         }
       }
-      // Check if file exists via list endpoint
+      // Check if file exists via list endpoint (backward compat)
       const listRes = await fetch(`${apiUrl}/record/list/${liveClass.batch_id}`, {
         headers: { "x-api-secret": apiSecret },
       }).catch(() => null);
       if (listRes && listRes.ok) {
         const listData = await listRes.json();
         const match = (listData.recordings || []).find((r: any) =>
-          r.fileName && r.fileName.includes(liveClass.id.replace(/-/g, ""))
+          r.fileName && (r.fileName.includes(liveClass.id.replace(/-/g, ""))
+            || (liveClass.title && r.fileName.includes(liveClass.title.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase().slice(0, 30))))
         );
         if (match) {
           recordingUrl = match.url;
@@ -143,7 +137,7 @@ export async function POST(req: Request) {
     if (liveClass.subject_id) {
       let chapterId = liveClass.chapter_id;
       if (!chapterId) {
-        chapterId = await ensureChapterRecord(liveClass.batch_id, liveClass.subject_id);
+        chapterId = await ensureChapterRecord(liveClass.batch_id, liveClass.subject_id, liveClass.title);
       }
 
       const lectureData: any = {

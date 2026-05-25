@@ -98,11 +98,18 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    fetch(`${apiUrl}/record/start`, {
+    const recordRes = await fetch(`${apiUrl}/record/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
       body: JSON.stringify({ roomName, liveClassId: liveClass.id, batchId: body.batchId, title: body.title || "Instant Live Class" }),
-    }).catch(() => {});
+    }).catch(() => null);
+    if (recordRes && recordRes.ok) {
+      const recordData = await recordRes.json().catch(() => null);
+      if (recordData?.file) {
+        const recordingUrl = `${apiUrl}/recordings/${body.batchId}/${recordData.file}`;
+        supabaseAdmin.from("live_classes").update({ recording_url: recordingUrl }).eq("id", liveClass.id).catch(() => {});
+      }
+    }
 
     notifyBatchStudents(
       body.batchId,

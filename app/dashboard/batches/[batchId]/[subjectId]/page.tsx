@@ -233,50 +233,57 @@ export default async function SubjectPage({
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
               Live Classes
             </h2>
-            {data.liveClasses.length === 0 ? (
-              <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-gray-400">
-                <Video size={32} className="mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No live classes yet for this subject.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {data.liveClasses.map((lc: any) => {
-                  const isLive = lc.status === "live";
-                  const isScheduled = lc.status === "scheduled";
-                  return (
-                    <Link
-                      key={lc.id}
-                      href={`/dashboard/live/${lc.id}`}
-                      className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 hover:border-purple-200"
-                    >
-                      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${isLive ? "bg-red-50" : "bg-purple-50"}`}>
-                        <Video size={20} className={isLive ? "text-red-500" : "text-purple-500"} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="block truncate text-sm font-medium text-gray-800">{lc.title}</span>
-                          {isLive && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                              LIVE
-                            </span>
-                          )}
-                          {isScheduled && (
-                            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-600">
-                              UPCOMING
-                            </span>
-                          )}
+            {(() => {
+              const upcoming = data.liveClasses.filter(
+                (lc: any) => lc.status === "live" || lc.status === "scheduled"
+              );
+              if (upcoming.length === 0) {
+                return (
+                  <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-gray-400">
+                    <Video size={32} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No upcoming live classes for this subject.</p>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex flex-col gap-3">
+                  {upcoming.map((lc: any) => {
+                    const isLive = lc.status === "live";
+                    return (
+                      <Link
+                        key={lc.id}
+                        href={`/dashboard/live/${lc.id}`}
+                        className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 hover:border-purple-200"
+                      >
+                        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${isLive ? "bg-red-50" : "bg-purple-50"}`}>
+                          <Video size={20} className={isLive ? "text-red-500" : "text-purple-500"} />
                         </span>
-                        <p className="mt-0.5 text-xs text-gray-400">
-                          {isLive ? "Started " : "Scheduled "}
-                          {new Date(lc.scheduled_at).toLocaleString("en-IN")}
-                        </p>
-                      </div>
-                      <ChevronRight size={16} className="shrink-0 text-gray-300" />
-                    </Link>
-                  );
-                })}
-              </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="block truncate text-sm font-medium text-gray-800">{lc.title}</span>
+                            {isLive ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                                LIVE
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-600">
+                                UPCOMING
+                              </span>
+                            )}
+                          </span>
+                          <p className="mt-0.5 text-xs text-gray-400">
+                            {isLive ? "Started " : "Scheduled "}
+                            {new Date(lc.scheduled_at).toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="shrink-0 text-gray-300" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             )}
           </section>
 
