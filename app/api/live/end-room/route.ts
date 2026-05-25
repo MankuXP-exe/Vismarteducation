@@ -76,77 +76,73 @@ export async function POST(req: Request) {
         body: JSON.stringify({ roomName }),
       }).catch(() => {});
 
-      // Delete LiveKit room
+      // Delete LiveKit room (this disconnects all participants immediately)
       try {
         const roomService = new RoomServiceClient("http://187.127.172.181:7880", "devkey", "secret");
         await roomService.deleteRoom(roomName).catch(() => {});
       } catch {}
     }
 
-    // Poll Supabase for the recording_url (VPS ffmpeg close handler updates it)
-    for (let i = 0; i < 30; i++) {
-      if (recordingUrl) break;
-      await new Promise((r) => setTimeout(r, 2000));
-      const { data: updated } = await supabaseAdmin
-        .from("live_classes")
-        .select("recording_url, is_recording_available, thumbnail_url, recording_path")
-        .eq("id", classId)
-        .single();
-      if (updated?.recording_url) {
-        recordingUrl = updated.recording_url;
-        thumbnailUrl = updated.thumbnail_url || "";
-        break;
-      }
-    }
-
-    // Update live class status
-    const updateData: any = {
-      status: "completed",
-      ended_at: new Date().toISOString(),
-    };
-    if (recordingUrl) {
-      updateData.recording_url = recordingUrl;
-      updateData.is_recording_available = true;
-    }
-    if (thumbnailUrl) {
-      updateData.thumbnail_url = thumbnailUrl;
-    }
-
+    // Immediate: mark as completed so participants' checkClassStatus returns ended=true
     await supabaseAdmin
       .from("live_classes")
-      .update(updateData)
+      .update({ status: "completed", ended_at: new Date().toISOString() })
       .eq("id", classId);
 
-    // Create lecture entry if subject exists
-    if (liveClass.subject_id) {
-      let chapterId = liveClass.chapter_id;
-      if (!chapterId) {
-        chapterId = await ensureChapterRecord(liveClass.batch_id, liveClass.subject_id, liveClass.title);
+    // Return to client immediately — recording handling runs asynchronously
+    const response = NextResponse.json({ success: true, processing: true });
+
+    // Async: poll for recording and create lecture
+    (async () => {
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const { data: updated } = await supabaseAdmin
+          .from("live_classes")
+          .select("recording_url, is_recording_available, thumbnail_url, recording_path")
+          .eq("id", classId)
+          .single();
+        if (updated?.recording_url) {
+          recordingUrl = updated.recording_url;
+          thumbnailUrl = updated.thumbnail_url || "";
+          break;
+        }
       }
 
-      const lectureData: any = {
-        batch_id: liveClass.batch_id,
-        subject_id: liveClass.subject_id,
-        chapter_id: chapterId,
-        teacher_id: liveClass.teacher_id || user.id,
-        title: liveClass.title,
-        description: liveClass.description || "",
-        lecture_type: "live_recording",
-        is_active: true,
-        published_at: new Date().toISOString(),
-      };
-
+      const updateData: any = {};
       if (recordingUrl) {
-        lectureData.cloudflare_playback_url = recordingUrl;
+        updateData.recording_url = recordingUrl;
+        updateData.is_recording_available = true;
       }
       if (thumbnailUrl) {
-        lectureData.thumbnail_url = thumbnailUrl;
+        updateData.thumbnail_url = thumbnailUrl;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await supabaseAdmin.from("live_classes").update(updateData).eq("id", classId);
       }
 
-      await supabaseAdmin.from("lectures").insert(lectureData);
-    }
+      if (liveClass.subject_id && recordingUrl) {
+        let chapterId = liveClass.chapter_id;
+        if (!chapterId) {
+          chapterId = await ensureChapterRecord(liveClass.batch_id, liveClass.subject_id, liveClass.title);
+        }
 
-    return NextResponse.json({ success: true, recordingUrl: recordingUrl || null });
+        await supabaseAdmin.from("lectures").insert({
+          batch_id: liveClass.batch_id,
+          subject_id: liveClass.subject_id,
+          chapter_id: chapterId,
+          teacher_id: liveClass.teacher_id || user.id,
+          title: liveClass.title,
+          description: liveClass.description || "",
+          lecture_type: "live_recording",
+          is_active: true,
+          published_at: new Date().toISOString(),
+          cloudflare_playback_url: recordingUrl,
+          thumbnail_url: thumbnailUrl || undefined,
+        });
+      }
+    })();
+
+    return response;
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

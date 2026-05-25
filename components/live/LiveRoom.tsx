@@ -260,12 +260,12 @@ export default function LiveRoom({ classId, role }: Props) {
 
   const onDisconnected = useCallback(async () => {
     if (role === "student") {
-      await checkClassStatus();
-    }
-    if (!classEnded) {
+      const ended = await checkClassStatus();
+      if (!ended && !classEnded) toast.error("Disconnected from live stream");
+    } else if (!ending) {
       toast.error("Disconnected from live stream");
     }
-  }, [role, checkClassStatus, classEnded]);
+  }, [role, checkClassStatus, classEnded, ending]);
 
   const stopLive = useCallback(async () => {
     setEnding(true);
