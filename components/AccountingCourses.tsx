@@ -118,9 +118,9 @@ export default function AccountingCourses() {
             <p className="text-sm text-gray-600 font-medium">
               🎓 Start your professional accounting journey today
             </p>
-            <a href="#contact" id="view-all-courses-btn" className="btn-primary shrink-0">
-              View All Courses <ArrowRight size={15} />
-            </a>
+<a href="/batches" id="view-all-courses-btn" className="btn-primary shrink-0">
+  View All Courses <ArrowRight size={15} />
+</a>
           </div>
         </motion.div>
       </div>
