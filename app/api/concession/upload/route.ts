@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const VPS_API = process.env.VPS_API_URL || "http://127.0.0.1:3001";
+const VPS_API = process.env.VPS_API_URL || "https://api.vismartlearningeducation.com";
 const API_SECRET = process.env.VPS_API_SECRET || "random_secret_key_123";
 
 export async function POST(req: Request) {
