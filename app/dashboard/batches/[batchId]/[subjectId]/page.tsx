@@ -284,7 +284,6 @@ export default async function SubjectPage({
                 </div>
               );
             })()}
-            )}
           </section>
 
           <section className="mb-6">
