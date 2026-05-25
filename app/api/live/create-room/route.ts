@@ -3,6 +3,7 @@ import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 import { notifyBatchStudents } from "@/lib/notifications";
+import { EgressClient, EncodedFileOutput, EncodingOptionsPreset } from "livekit-server-sdk";
 
 function abbreviationFromName(name: string) {
   return name
@@ -145,18 +146,39 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    const recordRes = await fetch(`${apiUrl}/record/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
-      body: JSON.stringify({ roomName, liveClassId: liveClass.id, batchId: body.batchId, title: body.title }),
-    }).catch(() => null);
-    if (recordRes && recordRes.ok) {
-      const recordData = await recordRes.json().catch(() => null);
-      if (recordData?.file) {
-        const recordingUrl = `${apiUrl}/recordings/${body.batchId}/${recordData.file}`;
-        supabaseAdmin.from("live_classes").update({ recording_url: recordingUrl }).eq("id", liveClass.id).catch(() => {});
+    // Start LiveKit Egress recording (room composite -> mp4 -> MinIO)
+    const egressClient = new EgressClient(
+      `http://187.127.172.181:7880`,
+      "devkey",
+      "secret"
+    );
+    const fileName = `${roomName}-${Date.now()}.mp4`;
+    const expectedUrl = `https://stream.vismartlearningeducation.com/recordings/${body.batchId}/${fileName}`;
+    egressClient.startRoomCompositeEgress(
+      roomName,
+      new EncodedFileOutput({
+        filepath: `recordings/${body.batchId}/${fileName}`,
+        fileType: "MP4",
+        output: {
+          case: "s3",
+          value: {
+            accessKey: "egresskey",
+            secret: "egresssecret",
+            endpoint: "http://187.127.172.181:9000",
+            bucket: "recordings",
+            forcePathStyle: true,
+          },
+        },
+      }),
+      {
+        preset: EncodingOptionsPreset.H264_720P_30,
+        layout: "grid",
       }
-    }
+    ).then(() => {
+      supabaseAdmin.from("live_classes").update({ recording_url: expectedUrl }).eq("id", liveClass.id).catch(() => {});
+    }).catch((err) => {
+      console.error("Failed to start egress:", err);
+    });
 
     notifyBatchStudents(
       body.batchId,

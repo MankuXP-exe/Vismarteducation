@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
+import { EgressClient } from "livekit-server-sdk";
 
 async function ensureChapterRecord(batchId: string, subjectId: string, title?: string) {
   const { data: maxChapter } = await supabaseAdmin
@@ -62,60 +63,58 @@ export async function POST(req: Request) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
     const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
 
-    // Stop VPS recording and delete LiveKit room
-    if (liveClass.hms_room_id) {
-      await fetch(`${apiUrl}/record/stop`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
-        body: JSON.stringify({ roomName: liveClass.hms_room_id }),
-      }).catch(() => {});
+    // Stop any active egress for this room and delete LiveKit room
+    let recordingUrl = liveClass.recording_url || "";
+    let thumbnailUrl = "";
 
+    if (liveClass.hms_room_id) {
+      const roomName = liveClass.hms_room_id;
+
+      // Stop egress via LiveKit Egress API
+      try {
+        const egressClient = new EgressClient("http://187.127.172.181:7880", "devkey", "secret");
+        const egresses = await egressClient.listEgress({ roomName });
+        for (const e of egresses) {
+          if (e.status === 0 || e.status === 1) { // EGRESS_STARTING or EGRESS_ACTIVE
+            await egressClient.stopEgress(e.egressId).catch(() => {});
+          }
+        }
+      } catch {}
+
+      // Delete LiveKit room
       await fetch(`${apiUrl}/live/end-room`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
-        body: JSON.stringify({ roomName: liveClass.hms_room_id }),
+        body: JSON.stringify({ roomName }),
       }).catch(() => {});
     }
 
-    // Wait briefly for recording to finalize
-    await new Promise((r) => setTimeout(r, 1500));
+    // Wait for recording to finalize
+    await new Promise((r) => setTimeout(r, 2000));
 
-    // Check if recording was saved
-    let recordingUrl = "";
-    let thumbnailUrl = "";
+    // If we had a predicted URL but no egress info, check MinIO directly
+    if (!recordingUrl) {
+      try {
+        const listRes = await fetch(`${apiUrl}/record/list/${liveClass.batch_id}`, {
+          headers: { "x-api-secret": apiSecret },
+        }).catch(() => null);
+        if (listRes && listRes.ok) {
+          const listData = await listRes.json();
+          const match = (listData.recordings || []).find((r: any) =>
+            r.fileName && (r.fileName.includes(liveClass.id.replace(/-/g, ""))
+              || (liveClass.title && r.fileName.includes(liveClass.title.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase().slice(0, 30))))
+          );
+          if (match) recordingUrl = match.url;
+        }
+      } catch {}
+    }
 
-    // Use recording_url saved on the live_class if available (set by create-room/instant-room)
-    if (liveClass.recording_url) {
-      recordingUrl = liveClass.recording_url;
-    } else if (liveClass.hms_room_id) {
-      const statusRes = await fetch(`${apiUrl}/record/status/${liveClass.hms_room_id}`, {
-        headers: { "x-api-secret": apiSecret },
-      }).catch(() => null);
-      if (statusRes && statusRes.ok) {
-        const statusData = await statusRes.json();
-        if (statusData.isRecording) {
-          await fetch(`${apiUrl}/record/stop`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
-            body: JSON.stringify({ roomName: liveClass.hms_room_id }),
-          }).catch(() => {});
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-      }
-      // Check if file exists via list endpoint (backward compat)
-      const listRes = await fetch(`${apiUrl}/record/list/${liveClass.batch_id}`, {
-        headers: { "x-api-secret": apiSecret },
-      }).catch(() => null);
-      if (listRes && listRes.ok) {
-        const listData = await listRes.json();
-        const match = (listData.recordings || []).find((r: any) =>
-          r.fileName && (r.fileName.includes(liveClass.id.replace(/-/g, ""))
-            || (liveClass.title && r.fileName.includes(liveClass.title.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase().slice(0, 30))))
-        );
-        if (match) {
-          recordingUrl = match.url;
-        }
-      }
+    // Verify recording exists via the predicted URL
+    if (recordingUrl) {
+      try {
+        const check = await fetch(recordingUrl, { method: "HEAD" }).catch(() => null);
+        if (!check || !check.ok) recordingUrl = "";
+      } catch { recordingUrl = ""; }
     }
 
     // Update live class status
