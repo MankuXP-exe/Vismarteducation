@@ -159,7 +159,7 @@ export default function CourseCategories() {
 
                 <div className="mt-auto">
                   <a
-                    href="#batches"
+                    href="/batches"
                     className="inline-flex items-center gap-1 text-sm font-semibold text-[#5c35d9] group-hover:gap-2 transition-all duration-200"
                   >
                     Explore <ArrowRight size={14} />
