@@ -11,6 +11,9 @@ import {
   Menu,
   X,
   Percent,
+  Clock,
+  HelpCircle,
+  Bookmark,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,6 +67,21 @@ const navSections: NavSection[] = [
         href: "/concession",
         badge: "NEW",
       },
+      {
+        label: "Recent Learning",
+        icon: <Clock size={18} />,
+        href: "/dashboard/recent-learning",
+      },
+      {
+        label: "My Doubts",
+        icon: <HelpCircle size={18} />,
+        href: "/dashboard/doubts",
+      },
+      {
+        label: "Bookmarks",
+        icon: <Bookmark size={18} />,
+        href: "/dashboard/bookmarks",
+      },
     ],
   },
 ];
@@ -97,6 +115,18 @@ export default function Sidebar() {
         pathname === "/dashboard/study" ||
         pathname?.startsWith("/dashboard/study/")
       );
+    }
+    if (href === "/dashboard/tests") {
+      return pathname === "/dashboard/tests" || pathname?.startsWith("/dashboard/tests/");
+    }
+    if (href === "/dashboard/recent-learning") {
+      return pathname === "/dashboard/recent-learning";
+    }
+    if (href === "/dashboard/doubts") {
+      return pathname === "/dashboard/doubts";
+    }
+    if (href === "/dashboard/bookmarks") {
+      return pathname === "/dashboard/bookmarks";
     }
     if (href === "/dashboard/batches") {
       return pathname?.startsWith("/dashboard/batches");
