@@ -85,9 +85,13 @@ export default function LiveRoom({ classId, role }: Props) {
     }
   }
 
+  const videoOptions = role === "teacher"
+    ? { resolution: { width: 1920, height: 1080 }, codec: "vp8" }
+    : false;
+
   return (
     <LiveKitRoom
-      video={role === "teacher"}
+      video={videoOptions}
       audio={role === "teacher"}
       token={token}
       serverUrl={serverUrl}

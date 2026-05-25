@@ -119,7 +119,7 @@ export async function POST(req: Request) {
           },
         },
       }),
-      { encodingOptions: EncodingOptionsPreset.H264_720P_30, layout: "grid" }
+      { encodingOptions: EncodingOptionsPreset.H264_1080P_30, layout: "grid" }
     ).then(async () => {
       try { await supabaseAdmin.from("live_classes").update({ recording_url: expectedUrl }).eq("id", liveClass.id); } catch {}
     }).catch((err) => {

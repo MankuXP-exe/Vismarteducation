@@ -171,7 +171,7 @@ export async function POST(req: Request) {
         },
       }),
       {
-        encodingOptions: EncodingOptionsPreset.H264_720P_30,
+        encodingOptions: EncodingOptionsPreset.H264_1080P_30,
         layout: "grid",
       }
     ).then(async () => {
