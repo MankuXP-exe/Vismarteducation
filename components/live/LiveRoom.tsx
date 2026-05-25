@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { LiveKitRoom, useTracks, FocusLayout, ParticipantTile, RoomAudioRenderer } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import {
+  LiveKitRoom, useTracks, FocusLayout, ParticipantTile,
+  RoomAudioRenderer, useLocalParticipant
+} from "@livekit/components-react";
+import { Track, VideoPresets, createLocalVideoTrack } from "livekit-client";
 import "@livekit/components-styles";
 import toast from "react-hot-toast";
+import { RotateCw } from "lucide-react";
 import LiveRecording from "./LiveRecording";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 
@@ -25,6 +29,32 @@ function YouTubeStage() {
   const cameras = tracks.filter((t) => t.source === Track.Source.Camera);
   const mainTrack = screenShare || cameras[0];
   const others = cameras.filter((t) => t !== mainTrack).slice(0, 4);
+  const { localParticipant } = useLocalParticipant();
+
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [currentDeviceId, setCurrentDeviceId] = useState("");
+
+  useEffect(() => {
+    navigator.mediaDevices.enumerateDevices().then((d) => {
+      const cams = d.filter((d) => d.kind === "videoinput");
+      setDevices(cams);
+      if (cams.length > 0 && !currentDeviceId) setCurrentDeviceId(cams[0].deviceId);
+    });
+  }, [currentDeviceId]);
+
+  async function switchCamera() {
+    if (devices.length < 2) return;
+    const idx = devices.findIndex((d) => d.deviceId === currentDeviceId);
+    const next = devices[(idx + 1) % devices.length];
+    const track = await createLocalVideoTrack({
+      deviceId: next.deviceId,
+      resolution: VideoPresets.h1080.resolution,
+    });
+    await localParticipant?.setCameraEnabled(false);
+    await localParticipant?.publishTrack(track, { videoEncoding: VideoPresets.h1080.encoding });
+    setCurrentDeviceId(next.deviceId);
+    toast("Camera switched", { duration: 1500 });
+  }
 
   return (
     <div className="flex h-full w-full flex-col bg-black">
@@ -37,15 +67,22 @@ function YouTubeStage() {
           </div>
         )}
       </div>
-      {others.length > 0 && (
-        <div className="flex justify-center gap-1.5 overflow-x-auto px-2 py-1.5">
-          {others.map((track) => (
-            <div key={track.participant.identity} className="h-20 w-28 shrink-0 overflow-hidden rounded-lg md:h-24 md:w-36">
-              <ParticipantTile trackRef={track} className="h-full w-full" />
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="flex items-center justify-center gap-2 overflow-x-auto px-2 py-1.5">
+        {others.map((track) => (
+          <div key={track.participant.identity} className="h-20 w-28 shrink-0 overflow-hidden rounded-lg md:h-24 md:w-36">
+            <ParticipantTile trackRef={track} className="h-full w-full" />
+          </div>
+        ))}
+        {devices.length > 1 && (
+          <button
+            onClick={switchCamera}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            title="Switch camera"
+          >
+            <RotateCw className="h-5 w-5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -142,8 +179,28 @@ export default function LiveRoom({ classId, role }: Props) {
   }
 
   const videoOptions = role === "teacher"
-    ? { resolution: { width: 1280, height: 720 }, codec: "vp8" }
+    ? {
+        resolution: VideoPresets.h1080.resolution,
+        facingMode: "user" as const,
+      }
     : false;
+
+  const roomOptions = role === "teacher"
+    ? {
+        dynacast: true,
+        publishDefaults: {
+          simulcast: true,
+          videoCodecs: "h264" as const,
+          videoEncoding: VideoPresets.h1080.encoding,
+          videoSimulcastLayers: [VideoPresets.h720, VideoPresets.h360],
+          screenshareEncoding: VideoPresets.h1080.encoding,
+          screenshareSimulcastLayers: [VideoPresets.h720, VideoPresets.h360],
+        },
+        videoCaptureDefaults: {
+          resolution: VideoPresets.h1080.resolution,
+        },
+      }
+    : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
@@ -160,6 +217,7 @@ export default function LiveRoom({ classId, role }: Props) {
         audio={role === "teacher"}
         token={token}
         serverUrl={serverUrl}
+        options={roomOptions}
         data-lk-theme="default"
         className="flex-1"
         onConnected={() => setConnected(true)}
