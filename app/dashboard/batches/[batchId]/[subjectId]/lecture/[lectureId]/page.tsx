@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle, FileText, Play, Upload } from "lucide-react";
 import { getEffectiveRole } from "@/lib/auth/roles";
+import { checkBatchAccess } from "@/lib/auth/batch-access";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import LectureRecordingUpload from "@/components/dashboard/LectureRecordingUpload";
 import LectureVideoPlayer from "@/components/dashboard/LectureVideoPlayer";
+import AccessDenied from "@/components/AccessDenied";
 
 export const dynamic = "force-dynamic";
 
@@ -40,27 +42,6 @@ function formatDate(value?: string | null) {
   });
 }
 
-async function assertAccess(userId: string, batchId: string, user: any) {
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
-  const role = getEffectiveRole(user, profile);
-
-  if (role === "teacher" || role === "admin") return;
-
-  const { data: enrollment } = await supabaseAdmin
-    .from("enrollments")
-    .select("id")
-    .eq("student_id", userId)
-    .eq("batch_id", batchId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!enrollment) redirect("/dashboard/batches");
-}
-
 async function getLecturePageData(batchId: string, subjectId: string, lectureId: string) {
   const supabase = await createServerClient();
   const {
@@ -72,7 +53,8 @@ async function getLecturePageData(batchId: string, subjectId: string, lectureId:
   }
   if (!isSupabaseAdminConfigured) return null;
 
-  await assertAccess(user.id, batchId, user);
+  const access = await checkBatchAccess(user.id, batchId, user);
+  if (!access.allowed) return { accessDenied: true, reason: access.reason };
 
   const { data: profileData } = await supabaseAdmin
     .from("profiles")
@@ -129,15 +111,23 @@ export default async function LecturePage({
   const data = await getLecturePageData(batchId, subjectId, lectureId);
 
   if (!data) notFound();
+  if (!data || (data as any).accessDenied) {
+    const reason = (data as any)?.reason || "You don't have access to this batch.";
+    if ((data as any)?.accessDenied) return <AccessDenied message={reason} />;
+    notFound();
+    return null;
+  }
 
-  const videoUrl = data.lecture.cloudflare_playback_url;
+  const pd = data as any;
+  const { lecture, lectures: allLectures, materials: lectMaterials, canManage } = pd;
+  const videoUrl = lecture.cloudflare_playback_url;
 
   return (
     <div className="-mx-4 -mb-8 flex flex-col overflow-hidden bg-[#f7f8fc] lg:-m-8 lg:h-[calc(100vh-56px)] lg:flex-row">
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 pb-10 pt-5 lg:px-6">
           <Link
-            href={`/dashboard/batches/${batchId}/${subjectId}?chapter=${data.lecture.chapter_id}`}
+            href={`/dashboard/batches/${batchId}/${subjectId}?chapter=${lecture.chapter_id}`}
             className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900"
           >
             <ArrowLeft size={16} />
@@ -148,22 +138,22 @@ export default async function LecturePage({
             {videoUrl ? (
               <LectureVideoPlayer
                 src={videoUrl}
-                poster={data.lecture.cloudflare_thumbnail_url || undefined}
+                poster={lecture.cloudflare_thumbnail_url || undefined}
                 lectureId={lectureId}
-                lectureTitle={data.lecture.title}
+                lectureTitle={lecture.title}
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center text-white/60">
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/10">
                   <Play size={36} className="ml-1 text-white" />
                 </div>
-                <p className="text-lg font-semibold text-white/80">{data.lecture.title}</p>
+                <p className="text-lg font-semibold text-white/80">{lecture.title}</p>
                 <p className="mt-2 text-sm text-white/40">
-                  {data.lecture.lecture_type === "live_recording"
+                  {lecture.lecture_type === "live_recording"
                     ? "Recording is being processed. Check back later."
                     : "No video uploaded for this lecture yet."}
                 </p>
-                {data.canManage && (
+                {canManage && (
                   <LectureRecordingUpload lectureId={lectureId} batchId={batchId} />
                 )}
               </div>
@@ -171,27 +161,27 @@ export default async function LecturePage({
           </div>
 
           <div className="mt-5">
-            <h1 className="text-xl font-bold text-gray-900">{data.lecture.title}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{lecture.title}</h1>
             <p className="mt-1 text-sm text-gray-400">
-              {formatDate(data.lecture.published_at)}
-              {data.lecture.duration_label ? ` - ${data.lecture.duration_label}` : ""}
+              {formatDate(lecture.published_at)}
+              {lecture.duration_label ? ` - ${lecture.duration_label}` : ""}
             </p>
-            {data.lecture.description && (
+            {lecture.description && (
               <div className="mt-5 rounded-xl border border-gray-200 bg-white p-5">
                 <h2 className="mb-2 font-semibold text-gray-900">About this lecture</h2>
                 <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">
-                  {data.lecture.description}
+                  {lecture.description}
                 </p>
               </div>
             )}
 
             <div className="mt-5 rounded-xl border border-gray-200 bg-white p-5">
               <h2 className="mb-3 font-semibold text-gray-900">Notes and PDFs</h2>
-              {data.materials.length === 0 ? (
+              {lectMaterials.length === 0 ? (
                 <p className="text-sm text-gray-400">No notes uploaded for this lecture yet.</p>
               ) : (
                 <div className="space-y-2">
-                  {data.materials.map((material: any) => (
+                  {lectMaterials.map((material: any) => (
                     <a
                       key={material.id}
                       href={material.file_url}
@@ -217,10 +207,10 @@ export default async function LecturePage({
           <h2 className="text-sm font-bold text-gray-900">All Lectures</h2>
         </div>
         <div className="h-full overflow-y-auto pb-20">
-          {data.lectures.length === 0 ? (
+          {allLectures.length === 0 ? (
             <div className="p-6 text-center text-sm text-gray-400">No lectures in this subject yet.</div>
           ) : (
-            data.lectures.map((lecture) => {
+            allLectures.map((lecture: any) => {
               const isCurrent = lecture.id === lectureId;
               return (
                 <Link

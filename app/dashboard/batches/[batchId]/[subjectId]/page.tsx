@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronRight, FileText, Play, Video } from "lucide-react";
-import { getEffectiveRole } from "@/lib/auth/roles";
+import { checkBatchAccess } from "@/lib/auth/batch-access";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import AccessDenied from "@/components/AccessDenied";
 
 export const dynamic = "force-dynamic";
 
@@ -47,28 +48,6 @@ function normalizeChapterTitle(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "").replace(/^chapter/, "ch");
 }
 
-async function assertAccess(userId: string, batchId: string, user: any) {
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
-  const role = getEffectiveRole(user, profile);
-  const canManage = role === "teacher" || role === "admin";
-
-  if (canManage) return;
-
-  const { data: enrollment } = await supabaseAdmin
-    .from("enrollments")
-    .select("id")
-    .eq("student_id", userId)
-    .eq("batch_id", batchId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!enrollment) redirect("/dashboard/batches");
-}
-
 async function getSubjectPageData(batchId: string, subjectId: string, chapterParam?: string) {
   const supabase = await createServerClient();
   const {
@@ -78,7 +57,8 @@ async function getSubjectPageData(batchId: string, subjectId: string, chapterPar
   if (!user) redirect(`/login?redirect=/dashboard/batches/${batchId}/${subjectId}`);
   if (!isSupabaseAdminConfigured) return null;
 
-  await assertAccess(user.id, batchId, user);
+  const access = await checkBatchAccess(user.id, batchId, user);
+  if (!access.allowed) return { accessDenied: true, reason: access.reason };
 
   const [batchResult, subjectResult, chaptersResult, lecturesResult, materialsResult, liveClassesResult] =
     await Promise.all([
@@ -174,7 +154,15 @@ export default async function SubjectPage({
   const { chapter } = await searchParams;
   const data = await getSubjectPageData(batchId, subjectId, chapter);
 
-  if (!data) notFound();
+  if (!data || (data as any).accessDenied) {
+    const reason = (data as any)?.reason || "You don't have access to this batch.";
+    if ((data as any)?.accessDenied) return <AccessDenied message={reason} />;
+    notFound();
+    return null;
+  }
+
+  const pageData = data as any;
+  const { batch: sBatch, subject, chapters, selectedChapterId, lectures, materials: sMaterials, liveClasses: sLiveClasses } = pageData;
 
   return (
     <div className="flex flex-col gap-6">
@@ -182,8 +170,8 @@ export default async function SubjectPage({
         <Link href={`/dashboard/batches/${batchId}`} className="text-sm font-medium text-gray-500 hover:text-gray-900">
           Back to subjects
         </Link>
-        <h1 className="mt-3 text-xl font-bold text-gray-900">{data.subject.name}</h1>
-        <p className="mt-1 text-sm text-gray-500">{data.batch.title}</p>
+        <h1 className="mt-3 text-xl font-bold text-gray-900">{subject.name}</h1>
+        <p className="mt-1 text-sm text-gray-500">{sBatch.title}</p>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -191,14 +179,14 @@ export default async function SubjectPage({
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
             All Chapters
           </p>
-          {data.chapters.length === 0 ? (
+          {chapters.length === 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-400">
               No chapters found.
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {data.chapters.map((chapterItem) => {
-                const isActive = data.selectedChapterId === chapterItem.id;
+              {chapters.map((chapterItem: any) => {
+                const isActive = selectedChapterId === chapterItem.id;
                 return (
                   <Link
                     key={chapterItem.id}
@@ -234,7 +222,7 @@ export default async function SubjectPage({
               Live Classes
             </h2>
             {(() => {
-              const upcoming = data.liveClasses.filter(
+              const upcoming = sLiveClasses.filter(
                 (lc: any) => lc.status === "live" || lc.status === "scheduled"
               );
               if (upcoming.length === 0) {
@@ -290,14 +278,14 @@ export default async function SubjectPage({
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
               Lectures
             </h2>
-            {data.lectures.length === 0 ? (
+            {lectures.length === 0 ? (
               <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-gray-400">
                 <Play size={32} className="mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No lectures uploaded yet for this chapter.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {data.lectures.map((lecture) => (
+                {lectures.map((lecture: any) => (
                   <div
                     key={lecture.id}
                     className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-4 hover:border-purple-200"
@@ -337,14 +325,14 @@ export default async function SubjectPage({
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
               Notes and PDFs
             </h2>
-            {data.materials.length === 0 ? (
+            {sMaterials.length === 0 ? (
               <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-gray-400">
                 <FileText size={32} className="mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No notes uploaded yet for this chapter.</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {data.materials.map((material: any) => (
+                {sMaterials.map((material: any) => (
                   <a
                     key={material.id}
                     href={material.file_url}

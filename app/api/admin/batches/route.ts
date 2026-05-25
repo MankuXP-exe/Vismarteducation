@@ -1,9 +1,29 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+async function checkAdminAccess() {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized", status: 401 };
+
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const role = profile?.role || user?.app_metadata?.role || user?.user_metadata?.role;
+  if (role !== "teacher" && role !== "admin") return { error: "Teacher or admin access required", status: 403 };
+
+  return null;
+}
+
 export async function POST(req: Request) {
+  const denied = await checkAdminAccess();
+  if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status });
   try {
     const body = await req.json();
     const {
@@ -46,6 +66,9 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const denied = await checkAdminAccess();
+  if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status });
+
   try {
     const body = await req.json();
     const { id, ...updates } = body;

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronRight, FileText, Video } from "lucide-react";
-import { getEffectiveRole } from "@/lib/auth/roles";
+import { checkBatchAccess } from "@/lib/auth/batch-access";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import AccessDenied from "@/components/AccessDenied";
 
 export const dynamic = "force-dynamic";
 
@@ -47,25 +48,11 @@ async function getBatchPageData(batchId: string) {
   if (!user) redirect(`/login?redirect=/dashboard/batches/${batchId}`);
   if (!isSupabaseAdminConfigured) return null;
 
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  const role = getEffectiveRole(user, profile);
+  const access = await checkBatchAccess(user.id, batchId, user);
+  if (!access.allowed) return { accessDenied: true, reason: access.reason };
+
+  const role = access.role;
   const canManage = role === "teacher" || role === "admin";
-
-  if (!canManage) {
-    const { data: enrollment } = await supabaseAdmin
-      .from("enrollments")
-      .select("id")
-      .eq("student_id", user.id)
-      .eq("batch_id", batchId)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (!enrollment) redirect("/dashboard/batches");
-  }
 
   const batchResult = await supabaseAdmin
     .from("batches")
@@ -151,11 +138,15 @@ async function getBatchPageData(batchId: string) {
     }
   }
 
+  const canManageLocal = access.role === "teacher" || access.role === "admin";
+
   return {
+    accessDenied: false as const,
     batch: batchResult.data,
     subjects: Array.from(subjectsByName.values()),
     materials: materialsResult.data ?? [],
     liveClasses: liveClassesResult.data ?? [],
+    canManage: canManageLocal,
   };
 }
 
@@ -167,7 +158,14 @@ export default async function BatchDetailPage({
   const { batchId } = await params;
   const data = await getBatchPageData(batchId);
 
-  if (!data) notFound();
+  if (!data || (data as any).accessDenied) {
+    const reason = (data as any)?.reason || "You don't have access to this batch.";
+    if ((data as any)?.accessDenied) return <AccessDenied message={reason} />;
+    notFound();
+    return null;
+  }
+  const pageData = data as any;
+  const { batch, subjects, liveClasses, materials } = pageData;
 
   return (
     <div className="space-y-6">
@@ -175,19 +173,19 @@ export default async function BatchDetailPage({
         <Link href="/dashboard/batches" className="text-sm font-medium text-gray-500 hover:text-gray-900">
           Back to batches
         </Link>
-        <h1 className="mt-3 text-xl font-bold text-gray-900">{data.batch.title}</h1>
-        {data.batch.subtitle && <p className="mt-1 text-sm text-gray-500">{data.batch.subtitle}</p>}
+        <h1 className="mt-3 text-xl font-bold text-gray-900">{batch.title}</h1>
+        {batch.subtitle && <p className="mt-1 text-sm text-gray-500">{batch.subtitle}</p>}
       </div>
 
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Subjects</h2>
-        {data.subjects.length === 0 ? (
+        {subjects.length === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
             No subjects found for this batch yet. Upload a lecture from the teacher panel to create one.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.subjects.map((subject) => (
+            {subjects.map((subject: any) => (
               <Link
                 key={subject.id}
                 href={`/dashboard/batches/${batchId}/${subject.id}`}
@@ -213,7 +211,7 @@ export default async function BatchDetailPage({
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Live Classes</h2>
         {(() => {
-          const upcoming = data.liveClasses.filter(
+          const upcoming = liveClasses.filter(
             (lc: any) => lc.status === "live" || lc.status === "scheduled"
           );
           if (upcoming.length === 0) {
@@ -266,13 +264,13 @@ export default async function BatchDetailPage({
 
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Study Materials</h2>
-        {data.materials.length === 0 ? (
+        {materials.length === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
             No notes or PDFs uploaded yet.
           </div>
         ) : (
           <div className="space-y-3">
-            {data.materials.map((material: any) => (
+            {materials.map((material: any) => (
               <a
                 key={material.id}
                 href={material.file_url}
