@@ -141,7 +141,6 @@ function MobileNavLinks({ onClose }: { onClose: () => void }) {
     { label: "Study", href: "/dashboard/study", section: "LEARN ONLINE" },
     { label: "Batches", href: "/dashboard/batches", section: "STUDY PACKS" },
     { label: "My Tests", href: "/dashboard/tests", section: "STUDY PACKS" },
-    { label: "Refer & Earn", href: "/dashboard/refer", section: "MORE" },
     { label: "Teacher Panel", href: "/teacher", section: "ADMIN" },
   ];
 

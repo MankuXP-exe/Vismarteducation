@@ -6,7 +6,6 @@ import {
   BookOpen,
   Package,
   ClipboardList,
-  Gift,
   ShieldCheck,
   Sparkles,
   Menu,
@@ -65,36 +64,32 @@ const navSections: NavSection[] = [
         href: "/concession",
         badge: "NEW",
       },
-      {
-        label: "Refer & Earn",
-        icon: <Gift size={18} />,
-        href: "/dashboard/refer",
-      },
     ],
   },
 ];
 
 export default function Sidebar() {
-  const pathname = usePathname();
   const { user, profile } = useAuth();
-  const role = getEffectiveRole(user, profile);
+  const role = getEffectiveRole(user);
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const adminItems: NavItem[] = [
-    {
-      label: role === "admin" ? "Admin Panel" : "Teacher Panel",
-      icon: <ShieldCheck size={18} />,
-      href: "/teacher",
-    },
-  ];
-
   const sections: NavSection[] =
-    role === "teacher" || role === "admin"
-      ? [
-          ...navSections,
-          { title: "ADMIN", items: adminItems },
-        ]
-      : navSections;
+  role === "teacher" || role === "admin"
+    ? [
+        ...navSections,
+        {
+          title: "ADMIN",
+          items: [
+            {
+              label: role === "admin" ? "Admin Panel" : "Teacher Panel",
+              icon: <ShieldCheck size={18} />,
+              href: "/teacher",
+            },
+          ],
+        },
+      ]
+    : navSections;
 
   const isActive = (href: string) => {
     if (href === "/dashboard/study") {
