@@ -65,30 +65,26 @@ export function toBatchDisplay(row: any): Batch {
   };
 }
 
-export async function fetchActiveBatches(supabase: any): Promise<Batch[]> {
-  const { data, error } = await supabase
-    .from("batches")
-    .select("*")
-    .eq("is_active", true)
-    .order("is_featured", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error || !data) {
-    console.error("Failed to fetch batches:", error);
+export async function fetchActiveBatches(): Promise<Batch[]> {
+  try {
+    const res = await fetch("/api/batches");
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.batches || []).map(toBatchDisplay);
+  } catch {
     return [];
   }
-  return data.map(toBatchDisplay);
 }
 
-export async function fetchBatchBySlug(supabase: any, slug: string): Promise<Batch | null> {
-  const { data, error } = await supabase
-    .from("batches")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return toBatchDisplay(data);
+export async function fetchBatchBySlug(slug: string): Promise<Batch | null> {
+  try {
+    const res = await fetch(`/api/batches/slug/${slug}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.batch ? toBatchDisplay(json.batch) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchBatchById(supabase: any, id: string): Promise<Batch | null> {

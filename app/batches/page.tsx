@@ -12,9 +12,8 @@ import FilterBar from "@/components/batches/FilterBar";
 import BatchGrid from "@/components/batches/BatchGrid";
 import DiscountBanner from "@/components/batches/DiscountBanner";
 import EmptyState from "@/components/batches/EmptyState";
-import { fetchActiveBatches, categories } from "@/lib/batches-data";
+import { fetchActiveBatches } from "@/lib/batches-data";
 import type { Batch } from "@/lib/batches-data";
-import { createClient } from "@/lib/supabase/client";
 
 type SortOption = "newest" | "price-asc" | "price-desc";
 
@@ -26,8 +25,7 @@ function BatchesContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
-    fetchActiveBatches(supabase).then((data) => {
+    fetchActiveBatches().then((data) => {
       setBatches(data);
       setLoading(false);
     });

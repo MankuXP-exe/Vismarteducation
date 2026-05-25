@@ -21,7 +21,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { fetchBatchBySlug } from "@/lib/batches-data";
 import type { Batch } from "@/lib/batches-data";
-import { createClient } from "@/lib/supabase/client";
 
 /* ──────────────── TYPES ──────────────── */
 type TabId = "overview" | "subjects" | "schedule" | "faculty" | "faq";
@@ -328,8 +327,7 @@ export default function BatchDetailPage({
   const router = useRouter();
 
   useEffect(() => {
-    const supabase = createClient();
-    fetchBatchBySlug(supabase, params.id).then((d) => {
+    fetchBatchBySlug(params.id).then((d) => {
       setBatch(d);
       setLoading(false);
     });
