@@ -4,8 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
-  Calculator,
-  Library,
   Package,
   ClipboardList,
   Gift,
@@ -40,17 +38,7 @@ const navSections: NavSection[] = [
         icon: <BookOpen size={18} />,
         href: "/dashboard/study",
       },
-      {
-        label: "Pi",
-        icon: <Calculator size={18} />,
-        href: "/dashboard/pi",
-        badge: "NEW",
-      },
-      {
-        label: "Library",
-        icon: <Library size={18} />,
-        href: "/dashboard/library",
-      },
+
     ],
   },
   {

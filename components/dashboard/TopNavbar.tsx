@@ -137,10 +137,8 @@ function MobileNavLinks({ onClose }: { onClose: () => void }) {
         ? pathname?.startsWith("/dashboard/batches")
         : pathname === href;
 
-  const items = [
+  const items: { label: string; href: string; section: string; badge?: string }[] = [
     { label: "Study", href: "/dashboard/study", section: "LEARN ONLINE" },
-    { label: "Pi", href: "/dashboard/pi", section: "LEARN ONLINE", badge: "NEW" },
-    { label: "Library", href: "/dashboard/library", section: "LEARN ONLINE" },
     { label: "Batches", href: "/dashboard/batches", section: "STUDY PACKS" },
     { label: "My Tests", href: "/dashboard/tests", section: "STUDY PACKS" },
     { label: "Refer & Earn", href: "/dashboard/refer", section: "MORE" },
@@ -169,7 +167,7 @@ function MobileNavLinks({ onClose }: { onClose: () => void }) {
                   : "text-gray-600 hover:bg-[#f0f0ff] hover:text-[#5c35d9]"
               }`}
             >
-              <span className="flex-1">{item.label}</span>
+                <span className="flex-1">{item.label}</span>
               {item.badge && (
                 <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
                   {item.badge}
