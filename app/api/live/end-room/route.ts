@@ -84,12 +84,12 @@ export async function POST(req: Request) {
     }
 
     // Poll Supabase for the recording_url (VPS ffmpeg close handler updates it)
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 30; i++) {
       if (recordingUrl) break;
       await new Promise((r) => setTimeout(r, 2000));
       const { data: updated } = await supabaseAdmin
         .from("live_classes")
-        .select("recording_url, is_recording_available, thumbnail_url")
+        .select("recording_url, is_recording_available, thumbnail_url, recording_path")
         .eq("id", classId)
         .single();
       if (updated?.recording_url) {
