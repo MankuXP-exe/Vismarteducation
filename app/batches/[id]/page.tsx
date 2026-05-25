@@ -541,25 +541,14 @@ export default function BatchDetailPage({
             <Phone size={15} />
             <span className="hidden xs:inline">Call</span>
           </a>
-          <motion.a
-            href={`https://wa.me/919821233879?text=Hi%2C%20I%20want%20to%20enroll%20in%20${encodeURIComponent(batch.title)}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href={`/checkout/${batch.id}`}
             id={`enroll-mobile-${batch.id}`}
             className="flex-1 flex items-center justify-center py-3 bg-[#5c35d9] text-white font-bold rounded-xl text-sm"
             style={{ minHeight: "48px" }}
-            whileTap={{ scale: 0.97 }}
-            animate={{
-              boxShadow: [
-                "0 0 0 0 rgba(92,53,217,0.4)",
-                "0 0 0 10px rgba(92,53,217,0)",
-                "0 0 0 0 rgba(92,53,217,0)",
-              ],
-            }}
-            transition={{ duration: 2.5, repeat: Infinity }}
           >
             Enroll Now — ₹{batch.price.toLocaleString("en-IN")}
-          </motion.a>
+          </Link>
           <a
             href={`https://wa.me/919821233879?text=Hi%2C%20I%20want%20to%20enroll%20in%20${encodeURIComponent(batch.title)}`}
             target="_blank"
@@ -646,25 +635,13 @@ function DesktopEnrollCard({
         <div className="border-t border-gray-100" />
 
         {/* CTA Buttons */}
-        <motion.a
-          href={`https://wa.me/919821233879?text=Hi%2C%20I%20want%20to%20enroll%20in%20${encodeURIComponent(batch.title)}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href={`/checkout/${batch.id}`}
           id={`enroll-detail-${batch.id}`}
           className="block w-full text-center py-3.5 bg-[#5c35d9] text-white font-bold rounded-xl text-base transition-all duration-200 hover:bg-[#4a28b8]"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          animate={{
-            boxShadow: [
-              "0 0 0 0 rgba(92,53,217,0.4)",
-              "0 0 0 8px rgba(92,53,217,0)",
-              "0 0 0 0 rgba(92,53,217,0)",
-            ],
-          }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
           Enroll Now
-        </motion.a>
+        </Link>
 
         <a
           href="tel:9821233879"
