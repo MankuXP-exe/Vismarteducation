@@ -3,7 +3,7 @@ import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 import { notifyBatchStudents } from "@/lib/notifications";
-import { EgressClient, EncodedFileOutput, EncodingOptionsPreset, EncodedFileType } from "livekit-server-sdk";
+
 
 function abbreviationFromName(name: string) {
   const letters = name
@@ -99,31 +99,13 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    // Start LiveKit Egress recording
-    const egressClient = new EgressClient("http://187.127.172.181:7880", "devkey", "secret");
-    const fileName = `${roomName}-${Date.now()}.mp4`;
-    const expectedUrl = `https://stream.vismartlearningeducation.com/recordings/${body.batchId}/${fileName}`;
-    egressClient.startRoomCompositeEgress(
-      roomName,
-      new EncodedFileOutput({
-        filepath: `recordings/${body.batchId}/${fileName}`,
-        fileType: EncodedFileType.MP4,
-        output: {
-          case: "s3",
-          value: {
-            accessKey: "egresskey",
-            secret: "egresssecret",
-            endpoint: "http://187.127.172.181:9000",
-            bucket: "recordings",
-            forcePathStyle: true,
-          },
-        },
-      }),
-      { encodingOptions: EncodingOptionsPreset.H264_1080P_30, layout: "grid" }
-    ).then(async () => {
-      try { await supabaseAdmin.from("live_classes").update({ recording_url: expectedUrl }).eq("id", liveClass.id); } catch {}
+    // Start VPS ffmpeg recording (saves directly to local filesystem)
+    fetch(`${apiUrl}/record/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
+      body: JSON.stringify({ roomName, liveClassId: liveClass.id, batchId: body.batchId, title: body.title || "Instant Live Class" }),
     }).catch((err) => {
-      console.error("Failed to start egress:", err);
+      console.error("Failed to start VPS recording:", err);
     });
 
     notifyBatchStudents(

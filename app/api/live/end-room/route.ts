@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
-import { EgressClient } from "livekit-server-sdk";
+import { RoomServiceClient } from "livekit-server-sdk";
 
 async function ensureChapterRecord(batchId: string, subjectId: string, title?: string) {
   const { data: maxChapter } = await supabaseAdmin
@@ -63,58 +63,40 @@ export async function POST(req: Request) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
     const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
 
-    // Stop any active egress for this room and delete LiveKit room
     let recordingUrl = liveClass.recording_url || "";
     let thumbnailUrl = "";
 
+    // Stop the VPS ffmpeg recording
     if (liveClass.hms_room_id) {
       const roomName = liveClass.hms_room_id;
 
-      // Stop egress via LiveKit Egress API
-      try {
-        const egressClient = new EgressClient("http://187.127.172.181:7880", "devkey", "secret");
-        const egresses = await egressClient.listEgress({ roomName });
-        for (const e of egresses) {
-          if (e.status === 0 || e.status === 1) { // EGRESS_STARTING or EGRESS_ACTIVE
-            await egressClient.stopEgress(e.egressId).catch(() => {});
-          }
-        }
-      } catch {}
-
-      // Delete LiveKit room
-      await fetch(`${apiUrl}/live/end-room`, {
+      await fetch(`${apiUrl}/record/stop`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
         body: JSON.stringify({ roomName }),
       }).catch(() => {});
-    }
 
-    // Wait for recording to finalize
-    await new Promise((r) => setTimeout(r, 2000));
-
-    // If we had a predicted URL but no egress info, check MinIO directly
-    if (!recordingUrl) {
+      // Delete LiveKit room
       try {
-        const listRes = await fetch(`${apiUrl}/record/list/${liveClass.batch_id}`, {
-          headers: { "x-api-secret": apiSecret },
-        }).catch(() => null);
-        if (listRes && listRes.ok) {
-          const listData = await listRes.json();
-          const match = (listData.recordings || []).find((r: any) =>
-            r.fileName && (r.fileName.includes(liveClass.id.replace(/-/g, ""))
-              || (liveClass.title && r.fileName.includes(liveClass.title.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase().slice(0, 30))))
-          );
-          if (match) recordingUrl = match.url;
-        }
+        const roomService = new RoomServiceClient("http://187.127.172.181:7880", "devkey", "secret");
+        await roomService.deleteRoom(roomName).catch(() => {});
       } catch {}
     }
 
-    // Verify recording exists via the predicted URL
-    if (recordingUrl) {
-      try {
-        const check = await fetch(recordingUrl, { method: "HEAD" }).catch(() => null);
-        if (!check || !check.ok) recordingUrl = "";
-      } catch { recordingUrl = ""; }
+    // Poll Supabase for the recording_url (VPS ffmpeg close handler updates it)
+    for (let i = 0; i < 15; i++) {
+      if (recordingUrl) break;
+      await new Promise((r) => setTimeout(r, 2000));
+      const { data: updated } = await supabaseAdmin
+        .from("live_classes")
+        .select("recording_url, is_recording_available, thumbnail_url")
+        .eq("id", classId)
+        .single();
+      if (updated?.recording_url) {
+        recordingUrl = updated.recording_url;
+        thumbnailUrl = updated.thumbnail_url || "";
+        break;
+      }
     }
 
     // Update live class status
@@ -125,6 +107,9 @@ export async function POST(req: Request) {
     if (recordingUrl) {
       updateData.recording_url = recordingUrl;
       updateData.is_recording_available = true;
+    }
+    if (thumbnailUrl) {
+      updateData.thumbnail_url = thumbnailUrl;
     }
 
     await supabaseAdmin
@@ -153,6 +138,9 @@ export async function POST(req: Request) {
 
       if (recordingUrl) {
         lectureData.cloudflare_playback_url = recordingUrl;
+      }
+      if (thumbnailUrl) {
+        lectureData.thumbnail_url = thumbnailUrl;
       }
 
       await supabaseAdmin.from("lectures").insert(lectureData);

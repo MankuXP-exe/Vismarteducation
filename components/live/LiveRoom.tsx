@@ -9,7 +9,7 @@ import {
 import { Track, VideoPresets, createLocalVideoTrack } from "livekit-client";
 import "@livekit/components-styles";
 import toast from "react-hot-toast";
-import { RotateCw } from "lucide-react";
+import { RotateCw, Mic, MicOff, Camera, CameraOff, MonitorUp } from "lucide-react";
 import LiveRecording from "./LiveRecording";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 
@@ -33,6 +33,9 @@ function TeacherStage() {
 
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [currentDeviceId, setCurrentDeviceId] = useState("");
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
+  const [shareOn, setShareOn] = useState(false);
 
   useEffect(() => {
     navigator.mediaDevices.enumerateDevices().then((d) => {
@@ -56,6 +59,43 @@ function TeacherStage() {
     toast("Camera switched", { duration: 1500 });
   }
 
+  function toggleMic() {
+    const next = !micOn;
+    localParticipant?.setMicrophoneEnabled(next);
+    setMicOn(next);
+  }
+
+  function toggleCam() {
+    const next = !camOn;
+    localParticipant?.setCameraEnabled(next);
+    setCamOn(next);
+  }
+
+  async function toggleScreenShare() {
+    if (shareOn) {
+      const screenTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
+      if (screenTrack?.participant) {
+        const pub = screenTrack.participant.getTrackPublication(screenTrack.source);
+        if (pub?.track) pub.track.stop();
+      }
+      setShareOn(false);
+    } else {
+      try {
+        const screenTracks = await localParticipant?.createScreenTracks({
+          resolution: VideoPresets.h1080.resolution,
+        });
+        if (screenTracks && screenTracks.length > 0) {
+          screenTracks.forEach((track) => { localParticipant?.publishTrack(track); });
+          setShareOn(true);
+        }
+      } catch (e: any) {
+        toast.error(e?.message || "Screen share cancelled");
+      }
+    }
+  }
+
+  const btnBase = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors md:h-12 md:w-12";
+
   return (
     <div className="flex h-full w-full flex-col bg-black">
       <div className="relative flex-1 overflow-hidden">
@@ -73,10 +113,33 @@ function TeacherStage() {
             <ParticipantTile trackRef={track} className="h-full w-full" />
           </div>
         ))}
+      </div>
+      <div className="flex items-center justify-center gap-3 bg-gray-900 px-4 py-3">
+        <button
+          onClick={toggleMic}
+          className={`${btnBase} ${micOn ? "bg-white/15 text-white hover:bg-white/25" : "bg-red-600 text-white"}`}
+          title={micOn ? "Mute microphone" : "Unmute microphone"}
+        >
+          {micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+        </button>
+        <button
+          onClick={toggleCam}
+          className={`${btnBase} ${camOn ? "bg-white/15 text-white hover:bg-white/25" : "bg-red-600 text-white"}`}
+          title={camOn ? "Turn off camera" : "Turn on camera"}
+        >
+          {camOn ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
+        </button>
+        <button
+          onClick={toggleScreenShare}
+          className={`${btnBase} ${shareOn ? "bg-[#5c35d9] text-white" : "bg-white/15 text-white hover:bg-white/25"}`}
+          title={shareOn ? "Stop sharing screen" : "Share screen"}
+        >
+          <MonitorUp className="h-5 w-5" />
+        </button>
         {devices.length > 1 && (
           <button
             onClick={switchCamera}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            className={`${btnBase} bg-white/15 text-white hover:bg-white/25`}
             title="Switch camera"
           >
             <RotateCw className="h-5 w-5" />
