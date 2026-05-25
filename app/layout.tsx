@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import CookieBanner from "@/components/legal/CookieBanner";
 import { Toaster } from "react-hot-toast";
+import AIAssistant from "@/components/AIAssistant";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -59,6 +60,7 @@ export default function RootLayout({
           {children}
           <CookieBanner />
           <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+          <AIAssistant />
         </AuthProvider>
       </body>
     </html>
