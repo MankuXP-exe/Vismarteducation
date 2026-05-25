@@ -3,7 +3,7 @@ import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 import { notifyBatchStudents } from "@/lib/notifications";
-import { EgressClient, EncodedFileOutput, EncodingOptionsPreset } from "livekit-server-sdk";
+import { EgressClient, EncodedFileOutput, EncodingOptionsPreset, EncodedFileType } from "livekit-server-sdk";
 
 function abbreviationFromName(name: string) {
   const letters = name
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       roomName,
       new EncodedFileOutput({
         filepath: `recordings/${body.batchId}/${fileName}`,
-        fileType: "MP4",
+        fileType: EncodedFileType.MP4,
         output: {
           case: "s3",
           value: {
@@ -119,9 +119,9 @@ export async function POST(req: Request) {
           },
         },
       }),
-      { preset: EncodingOptionsPreset.H264_720P_30, layout: "grid" }
-    ).then(() => {
-      supabaseAdmin.from("live_classes").update({ recording_url: expectedUrl }).eq("id", liveClass.id).catch(() => {});
+      { encodingOptions: EncodingOptionsPreset.H264_720P_30, layout: "grid" }
+    ).then(async () => {
+      try { await supabaseAdmin.from("live_classes").update({ recording_url: expectedUrl }).eq("id", liveClass.id); } catch {}
     }).catch((err) => {
       console.error("Failed to start egress:", err);
     });
