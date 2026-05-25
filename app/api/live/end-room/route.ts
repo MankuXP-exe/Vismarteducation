@@ -152,7 +152,7 @@ export async function POST(req: Request) {
       };
 
       if (recordingUrl) {
-        lectureData.video_url = recordingUrl;
+        lectureData.cloudflare_playback_url = recordingUrl;
       }
 
       await supabaseAdmin.from("lectures").insert(lectureData);

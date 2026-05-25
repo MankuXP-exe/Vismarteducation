@@ -83,7 +83,7 @@ async function getLecturePageData(batchId: string, subjectId: string, lectureId:
     supabaseAdmin
       .from("lectures")
       .select(
-        "id,batch_id,subject_id,chapter_id,title,description,cloudflare_playback_url,cloudflare_thumbnail_url,duration_label,duration_seconds,published_at,lecture_type,video_url"
+        "id,batch_id,subject_id,chapter_id,title,description,cloudflare_playback_url,cloudflare_thumbnail_url,duration_label,duration_seconds,published_at,lecture_type"
       )
       .eq("id", lectureId)
       .eq("batch_id", batchId)
@@ -129,7 +129,7 @@ export default async function LecturePage({
 
   if (!data) notFound();
 
-  const videoUrl = data.lecture.cloudflare_playback_url || data.lecture.video_url;
+  const videoUrl = data.lecture.cloudflare_playback_url;
 
   return (
     <div className="-mx-4 -mb-8 flex flex-col overflow-hidden bg-[#f7f8fc] lg:-m-8 lg:h-[calc(100vh-56px)] lg:flex-row">
