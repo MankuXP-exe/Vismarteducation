@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ChevronDown, ChevronRight, User, LogOut } from "lucide-react";
+import { Menu, X, ChevronDown, ChevronRight, LogOut, Settings, BookOpen, GraduationCap, Shield } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -55,10 +55,14 @@ export default function Navbar() {
   const [batchOpen, setBatchOpen] = useState(false);
   const [mobileBatchOpen, setMobileBatchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const isBatchesActive = pathname?.startsWith("/batches");
+  const role = profile?.role || user?.user_metadata?.role || "student";
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email || "Student";
+  const initial = displayName.charAt(0).toUpperCase();
 
   const handleSignOut = async () => {
     await signOut();
@@ -72,18 +76,21 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setBatchOpen(false);
       }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
     };
-    if (batchOpen) {
+    if (batchOpen || profileOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [batchOpen]);
+  }, [batchOpen, profileOpen]);
 
   return (
     <>
@@ -241,32 +248,78 @@ export default function Navbar() {
                     </Link>
                   </>
                 ) : (
-                  <div className="relative">
+                  <div className="relative" ref={profileDropdownRef}>
                     <button
-                      onClick={() => setProfileOpen((open) => !open)}
-                      className="h-9 w-9 rounded-full bg-[#f0f4ff] flex items-center justify-center text-[#5c35d9] hover:bg-[#e8eeff]"
+                      onClick={() => setProfileOpen((o) => !o)}
+                      className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 transition-all hover:bg-[#f0f4ff]"
+                      style={profileOpen ? { background: "#e8eeff" } : {}}
                       aria-label="Open profile menu"
                     >
-                      <User size={17} />
-                    </button>
-                    {profileOpen && (
-                      <div className="absolute right-0 top-11 w-52 rounded-lg border border-gray-100 bg-white p-2 shadow-xl">
-                        <Link
-                          href="/dashboard"
-                          onClick={() => setProfileOpen(false)}
-                          className="block rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          Dashboard
-                        </Link>
-                        <button
-                          onClick={handleSignOut}
-                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          <LogOut size={15} />
-                          Sign out
-                        </button>
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                        style={{ background: role === "teacher" ? "#7c3aed" : role === "admin" ? "#ef4444" : "#3b82f6" }}>
+                        {initial}
                       </div>
-                    )}
+                      <div className="hidden md:block text-left">
+                        <p className="text-sm font-medium text-gray-800 leading-tight">{displayName}</p>
+                        <div className="flex items-center gap-1">
+                          {role === "teacher" || role === "admin" ? <Shield size={10} className="text-gray-400" /> : <GraduationCap size={10} className="text-gray-400" />}
+                          <span className="text-[10px] text-gray-500 capitalize">{role}</span>
+                        </div>
+                      </div>
+                      <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 hidden md:block ${profileOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {profileOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 top-11 w-64 rounded-2xl border border-gray-100 bg-white shadow-xl shadow-black/5 overflow-hidden"
+                        >
+                          <div className="px-4 pt-4 pb-3 border-b border-gray-50">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full flex items-center justify-center text-base font-bold text-white shrink-0"
+                                style={{ background: role === "teacher" ? "#7c3aed" : role === "admin" ? "#ef4444" : "#3b82f6" }}>
+                                {initial}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+                                <p className="text-xs text-gray-400 truncate">{user?.email || ""}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2.5 flex items-center gap-1.5">
+                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium text-white ${role === "teacher" ? "bg-purple-500" : role === "admin" ? "bg-red-500" : "bg-blue-500"}`}>
+                                {role === "teacher" || role === "admin" ? <Shield size={10} /> : <GraduationCap size={10} />}
+                                {role === "teacher" ? "Teacher" : role === "admin" ? "Admin" : "Student"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-1.5">
+                            <Link href="/dashboard/study" onClick={() => setProfileOpen(false)}
+                              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50">
+                              <BookOpen size={16} className="text-gray-400" />
+                              Dashboard
+                            </Link>
+                            <Link href="/dashboard/profile" onClick={() => setProfileOpen(false)}
+                              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50">
+                              <Settings size={16} className="text-gray-400" />
+                              Profile Settings
+                            </Link>
+                          </div>
+
+                          <div className="border-t border-gray-50 p-1.5">
+                            <button onClick={handleSignOut}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50">
+                              <LogOut size={16} />
+                              Sign Out
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
               </div>
@@ -422,8 +475,20 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
+                    <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center text-base font-bold text-white shrink-0"
+                        style={{ background: role === "teacher" ? "#7c3aed" : role === "admin" ? "#ef4444" : "#3b82f6" }}>
+                        {initial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-gray-500 capitalize">{role}</span>
+                        </div>
+                      </div>
+                    </div>
                     <Link
-                      href="/dashboard"
+                      href="/dashboard/study"
                       onClick={() => setMobileOpen(false)}
                       className="w-full rounded-lg bg-[#5c35d9] py-2.5 text-center font-semibold text-white"
                     >
