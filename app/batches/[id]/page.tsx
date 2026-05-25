@@ -324,14 +324,24 @@ export default function BatchDetailPage({
 }) {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const router = useRouter();
 
   useEffect(() => {
-    fetchBatchBySlug(params.id).then((d) => {
-      setBatch(d);
+    let cancelled = false;
+    async function load() {
+      try {
+        const d = await fetchBatchBySlug(params.id);
+        if (cancelled) return;
+        setBatch(d);
+      } catch {
+        setFetchError(true);
+      }
       setLoading(false);
-    });
+    }
+    load();
+    return () => { cancelled = true; };
   }, [params.id]);
 
   if (loading) {
@@ -340,6 +350,21 @@ export default function BatchDetailPage({
         <Navbar />
         <main className="min-h-screen bg-[#f8f9ff] flex items-center justify-center">
           <div className="w-10 h-10 border-4 border-[#5c35d9]/30 border-t-[#5c35d9] rounded-full animate-spin" />
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center gap-4 px-4">
+          <p className="text-lg text-gray-500">Could not load batch details</p>
+          <button onClick={() => window.location.reload()} className="rounded-lg bg-[#5c35d9] px-6 py-2 text-sm font-semibold text-white hover:bg-[#4a2bb8] transition-colors">
+            Try Again
+          </button>
         </main>
         <Footer />
       </>

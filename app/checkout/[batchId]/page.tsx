@@ -38,49 +38,54 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     async function init() {
-      if (!isSupabaseAdminConfigured) {
-        setError("System not configured");
+      try {
+        if (!isSupabaseAdminConfigured) {
+          setError("System not configured");
+          setLoading(false);
+          return;
+        }
+
+        const { data: { user: authUser } } = await supabaseAdmin.auth.getUser();
+        if (!authUser) {
+          router.push("/login");
+          return;
+        }
+
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", authUser.id)
+          .single();
+
+        const res = await fetch(`/api/batches/slug/${batchId}`);
+        const json = await res.json();
+        if (!json.batch) {
+          setError("Batch not found");
+          setLoading(false);
+          return;
+        }
+
+        setBatch(json.batch);
+        setUser({
+          id: authUser.id,
+          name: profile?.full_name || authUser.email || "Student",
+          email: profile?.email || authUser.email || "",
+        });
+
+        const { data: conc } = await supabaseAdmin
+          .from("concession_requests")
+          .select("id, concession_type, discount_percent, discount_amount, status")
+          .eq("user_id", authUser.id)
+          .eq("status", "approved")
+          .eq("is_active", true)
+          .maybeSingle();
+
+        setConcession(conc);
         setLoading(false);
-        return;
-      }
-
-      const { data: { user: authUser } } = await supabaseAdmin.auth.getUser();
-      if (!authUser) {
-        router.push("/login");
-        return;
-      }
-
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("full_name, email")
-        .eq("id", authUser.id)
-        .single();
-
-      const res = await fetch(`/api/batches/slug/${batchId}`);
-      const json = await res.json();
-      if (!json.batch) {
-        setError("Batch not found");
+      } catch (e) {
+        setError("Something went wrong. Please try again.");
         setLoading(false);
-        return;
       }
-
-      setBatch(json.batch);
-      setUser({
-        id: authUser.id,
-        name: profile?.full_name || authUser.email || "Student",
-        email: profile?.email || authUser.email || "",
-      });
-
-      const { data: conc } = await supabaseAdmin
-        .from("concession_requests")
-        .select("id, concession_type, discount_percent, discount_amount, status")
-        .eq("user_id", authUser.id)
-        .eq("status", "approved")
-        .eq("is_active", true)
-        .maybeSingle();
-
-      setConcession(conc);
-      setLoading(false);
     }
     init();
   }, [batchId, router]);
