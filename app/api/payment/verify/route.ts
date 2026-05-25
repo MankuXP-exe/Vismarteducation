@@ -24,11 +24,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
     }
 
-    const { data: batch } = await supabaseAdmin
+    let { data: batch } = await supabaseAdmin
       .from("batches")
-      .select("duration_months, title")
-      .eq("id", batchId)
-      .single();
+      .select("id, duration_months, title")
+      .eq("slug", batchId)
+      .maybeSingle();
+    if (!batch) {
+      const r = await supabaseAdmin.from("batches").select("id, duration_months, title").eq("id", batchId).single();
+      batch = r.data;
+    }
+
+    const actualBatchId = batch?.id || batchId;
 
     const { data: payment } = await supabaseAdmin
       .from("payments")
@@ -54,7 +60,7 @@ export async function POST(req: Request) {
       .upsert(
         {
           student_id: user.id,
-          batch_id: batchId,
+          batch_id: actualBatchId,
           payment_id: razorpay_payment_id,
           payment_order_id: razorpay_order_id,
           amount_paid: payment?.amount ?? 0,
@@ -89,7 +95,7 @@ export async function POST(req: Request) {
       title: "Enrollment successful",
       message: `You are now enrolled in ${batch?.title ?? "your batch"}. Start learning now.`,
       type: "success",
-      action_url: `/dashboard/batches/${batchId}`,
+      action_url: `/dashboard/batches/${actualBatchId}`,
     });
 
     return NextResponse.json({ success: true, enrollment });

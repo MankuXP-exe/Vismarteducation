@@ -13,13 +13,19 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { batchId, discountType } = await req.json();
-    const { data: batch } = await supabase
+    let { data: batch } = await supabase
       .from("batches")
       .select("*")
-      .eq("id", batchId)
-      .single();
+      .eq("slug", batchId)
+      .maybeSingle();
+    if (!batch) {
+      const r = await supabase.from("batches").select("*").eq("id", batchId).single();
+      batch = r.data;
+    }
 
     if (!batch) return NextResponse.json({ error: "Batch not found" }, { status: 404 });
+
+    const actualBatchId = batch.id;
 
     let finalPrice = Number(batch.price);
     let discountAmount = 0;
@@ -64,7 +70,7 @@ export async function POST(req: Request) {
       amount: Math.round(finalPrice * 100),
       currency: "INR",
       notes: {
-        batchId,
+        batchId: actualBatchId,
         studentId: user.id,
         discountType: discountType || "none",
         concessionId: appliedConcessionId || "",
@@ -73,7 +79,7 @@ export async function POST(req: Request) {
 
     const paymentInsert: any = {
       student_id: user.id,
-      batch_id: batchId,
+      batch_id: actualBatchId,
       razorpay_order_id: order.id,
       amount: finalPrice,
       original_amount: batch.price,

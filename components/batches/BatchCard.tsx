@@ -55,7 +55,21 @@ export default function BatchCard({ batch, index }: BatchCardProps) {
         order_id: data.orderId,
         prefill: { contact: "", email: "" },
         theme: { color: "#5c35d9" },
-        handler: () => { router.push("/dashboard/batches"); },
+        handler: async function (response: any) {
+          const v = await fetch("/api/payment/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              batchId: batch.id,
+            }),
+          });
+          setPaying(false);
+          if (v.ok) router.push("/dashboard/batches");
+          else alert("Payment verification failed. Contact support.");
+        },
         modal: { ondismiss: () => setPaying(false) },
       };
       const rzp = new (window as any).Razorpay(options);
