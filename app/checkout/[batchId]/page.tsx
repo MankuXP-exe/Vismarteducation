@@ -8,6 +8,7 @@ import RazorpayButton from "@/components/payment/RazorpayButton";
 
 type BatchData = {
   id: string;
+  slug: string;
   title: string;
   category: string;
   price: number;
@@ -55,19 +56,15 @@ export default function CheckoutPage() {
         .eq("id", authUser.id)
         .single();
 
-      const { data: b } = await supabaseAdmin
-        .from("batches")
-        .select("id, title, category, price, original_price, teacher_name, thumbnail_url")
-        .eq("id", batchId)
-        .single();
-
-      if (!b) {
+      const res = await fetch(`/api/batches/slug/${batchId}`);
+      const json = await res.json();
+      if (!json.batch) {
         setError("Batch not found");
         setLoading(false);
         return;
       }
 
-      setBatch(b);
+      setBatch(json.batch);
       setUser({
         id: authUser.id,
         name: profile?.full_name || authUser.email || "Student",
