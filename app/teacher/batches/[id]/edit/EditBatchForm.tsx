@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, ChevronDown, ChevronUp } from "lucide-react";
 
 const CATEGORIES = ["JEE", "NEET", "Class 11-12", "Class 9-10", "Foundation", "CA", "B.COM", "BBA", "CUET", "NDA"];
 const STREAMS = ["", "PCM", "PCB", "PCMB", "Commerce", "Arts", "CA Foundation"];
 const CLASS_LEVELS = ["9th", "10th", "11th", "12th", "Dropper", "CA Foundation", "B.COM", "BBA", "Other"];
+const BADGE_OPTIONS = ["", "POPULAR", "NEW", "HOT", "LIVE"];
 
 type Batch = {
   id: string;
@@ -17,34 +18,62 @@ type Batch = {
   stream: string | null;
   class_level: string | null;
   price: number;
+  original_price: number | null;
   description: string | null;
   thumbnail_url: string | null;
+  banner_url: string | null;
   duration_months: number;
   subjects: string[];
   is_active: boolean;
+  badge: string | null;
+  is_featured: boolean;
+  teacher_name: string | null;
+  has_live_classes: boolean;
+  has_recorded_lectures: boolean;
+  has_notes: boolean;
+  has_doubt_support: boolean;
+  has_tests: boolean;
+  army_discount_percent: number;
+  disabled_discount_percent: number;
+  single_parent_flat_price: number;
 };
 
 export default function EditBatchForm({ batch }: { batch: Batch }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({
     title: batch.title,
     slug: batch.slug,
     category: batch.category,
     stream: batch.stream || "",
-    class_level: batch.class_level || "11",
+    class_level: batch.class_level || "",
     price: String(batch.price),
+    original_price: String(batch.original_price || ""),
     description: batch.description || "",
     thumbnail_url: batch.thumbnail_url || "",
+    banner_url: batch.banner_url || "",
     duration_months: String(batch.duration_months || 12),
     subjects: (batch.subjects || []).join(", "),
     is_active: batch.is_active,
+    badge: batch.badge || "",
+    is_featured: batch.is_featured || false,
+    teacher_name: batch.teacher_name || "",
+    has_live_classes: batch.has_live_classes ?? true,
+    has_recorded_lectures: batch.has_recorded_lectures ?? true,
+    has_notes: batch.has_notes ?? true,
+    has_doubt_support: batch.has_doubt_support ?? true,
+    has_tests: batch.has_tests ?? false,
+    army_discount_percent: String(batch.army_discount_percent ?? 50),
+    disabled_discount_percent: String(batch.disabled_discount_percent ?? 50),
+    single_parent_flat_price: String(batch.single_parent_flat_price ?? 5000),
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = type === "checkbox" ? (e.target as HTMLInputElement).checked : undefined;
     setForm((prev) => {
-      const next = { ...prev, [name]: value };
+      const next = { ...prev, [name]: checked !== undefined ? checked : value };
       if (name === "title" && prev.slug === batch.slug) {
         next.slug = value
           .toLowerCase()
@@ -70,7 +99,11 @@ export default function EditBatchForm({ batch }: { batch: Batch }) {
           id: batch.id,
           ...form,
           price: Number(form.price),
+          original_price: form.original_price ? Number(form.original_price) : undefined,
           duration_months: Number(form.duration_months),
+          army_discount_percent: Number(form.army_discount_percent),
+          disabled_discount_percent: Number(form.disabled_discount_percent),
+          single_parent_flat_price: Number(form.single_parent_flat_price),
           subjects: form.subjects
             .split(",")
             .map((s) => s.trim())
@@ -198,6 +231,92 @@ export default function EditBatchForm({ batch }: { batch: Batch }) {
         <label className={labelClass}>Description</label>
         <textarea name="description" rows={4} value={form.description} onChange={handleChange} className={inputClass} />
       </div>
+
+      {/* Advanced fields toggle */}
+      <div className="border-t border-gray-200 pt-4">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+        >
+          {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {showAdvanced ? "Hide" : "Show"} advanced settings
+        </button>
+      </div>
+
+      {showAdvanced && (
+        <div className="space-y-5 border-t border-gray-100 pt-4">
+          {/* Original Price */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Original Price (₹) — for discount display</label>
+              <input name="original_price" type="number" value={form.original_price} onChange={handleChange} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Badge</label>
+              <select name="badge" value={form.badge} onChange={handleChange} className={inputClass}>
+                {BADGE_OPTIONS.map((b) => (
+                  <option key={b} value={b}>{b || "None"}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Banner URL + Teacher */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Banner URL</label>
+              <input name="banner_url" value={form.banner_url} onChange={handleChange} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Teacher Name</label>
+              <input name="teacher_name" value={form.teacher_name} onChange={handleChange} className={inputClass} />
+            </div>
+          </div>
+
+          {/* Feature toggles */}
+          <div>
+            <label className={labelClass}>Features</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { key: "has_live_classes", label: "Live Classes" },
+                { key: "has_recorded_lectures", label: "Recorded Lectures" },
+                { key: "has_notes", label: "Notes" },
+                { key: "has_doubt_support", label: "Doubt Support" },
+                { key: "has_tests", label: "Tests" },
+                { key: "is_featured", label: "Featured" },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name={key}
+                    checked={(form as any)[key]}
+                    onChange={handleChange}
+                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Discounts */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className={labelClass}>Army Discount (%)</label>
+              <input name="army_discount_percent" type="number" value={form.army_discount_percent} onChange={handleChange} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Disabled Discount (%)</label>
+              <input name="disabled_discount_percent" type="number" value={form.disabled_discount_percent} onChange={handleChange} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Single Parent (₹)</label>
+              <input name="single_parent_flat_price" type="number" value={form.single_parent_flat_price} onChange={handleChange} className={inputClass} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Submit */}
       <div className="flex items-center justify-end gap-3 pt-2">
