@@ -64,7 +64,7 @@ export default function CTABanner() {
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 mt-2">
             <a
-              href="#courses"
+              href="/batches"
               id="cta-explore-batches"
               className="btn-yellow text-base px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-yellow-500/20"
             >

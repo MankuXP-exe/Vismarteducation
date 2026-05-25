@@ -100,7 +100,7 @@ export default function WhatIsViSmart() {
             </div>
 
             <div>
-              <a href="#courses" className="btn-primary inline-flex">
+              <a href="/batches" className="btn-primary inline-flex">
                 Explore Batches <ArrowRight size={16} />
               </a>
             </div>
