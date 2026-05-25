@@ -24,7 +24,7 @@ async function getPayments() {
   }));
 }
 
-export default async function AdminPaymentsPage() {
+export default async function TeacherPaymentsPage() {
   const payments = await getPayments();
 
   return (

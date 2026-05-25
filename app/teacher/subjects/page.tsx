@@ -3,7 +3,7 @@ import SubjectsClient from "./SubjectsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminSubjectsPage() {
+export default async function TeacherSubjectsPage() {
   const { data: batches } = await supabaseAdmin
     .from("batches")
     .select("id, title, slug, category, subjects")

@@ -35,7 +35,7 @@ const STATUS_COLORS: Record<string, string> = {
   expired: "bg-gray-100 text-gray-800",
 };
 
-export default function AdminConcessionsPage() {
+export default function TeacherConcessionsPage() {
   const [requests, setRequests] = useState<ConcessionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

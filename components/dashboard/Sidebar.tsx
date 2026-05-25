@@ -96,7 +96,7 @@ export default function Sidebar() {
     {
       label: role === "admin" ? "Admin Panel" : "Teacher Panel",
       icon: <ShieldCheck size={18} />,
-      href: role === "admin" ? "/admin/users" : "/teacher",
+      href: "/teacher",
     },
   ];
 

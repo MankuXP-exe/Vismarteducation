@@ -33,7 +33,7 @@ async function getLiveClasses() {
   return (data ?? []) as RawLiveClass[];
 }
 
-export default async function AdminLiveClassesPage() {
+export default async function TeacherLiveClassesPage() {
   const classes = await getLiveClasses();
 
   const mapped = classes.map((c) => ({

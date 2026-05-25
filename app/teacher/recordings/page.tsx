@@ -32,7 +32,7 @@ async function getRecordings() {
   return (data ?? []) as RawRecording[];
 }
 
-export default async function AdminRecordingsPage() {
+export default async function TeacherRecordingsPage() {
   const recordings = await getRecordings();
 
   const mapped = recordings.map((r) => ({

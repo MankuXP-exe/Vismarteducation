@@ -1,4 +1,4 @@
-export default function AdminAnalyticsPage() {
+export default function TeacherAnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>

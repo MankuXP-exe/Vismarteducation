@@ -39,7 +39,7 @@ async function getStudents() {
   };
 }
 
-export default async function AdminStudentsPage() {
+export default async function TeacherStudentsPage() {
   const { students, enrollments } = await getStudents();
 
   return (
