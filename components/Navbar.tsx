@@ -9,10 +9,10 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
-  { label: "About Us", href: "/#about" },
+  { label: "About Us", href: "/about" },
   { label: "Study Material", href: "/#study-material" },
   { label: "Results", href: "/#results" },
-  { label: "Contact", href: "/#contact" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const schoolBatches = [
