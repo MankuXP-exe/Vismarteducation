@@ -32,8 +32,18 @@ async function getRecordings() {
   return (data ?? []) as RawRecording[];
 }
 
+async function getBatches() {
+  if (!isSupabaseAdminConfigured) return [];
+  const { data } = await supabaseAdmin
+    .from("batches")
+    .select("id, title, subjects")
+    .eq("is_active", true)
+    .order("title");
+  return (data ?? []) as { id: string; title: string; subjects: string[] | null }[];
+}
+
 export default async function TeacherRecordingsPage() {
-  const recordings = await getRecordings();
+  const [recordings, batches] = await Promise.all([getRecordings(), getBatches()]);
 
   const mapped = recordings.map((r) => ({
     id: r.id,
@@ -57,7 +67,7 @@ export default async function TeacherRecordingsPage() {
           <p className="text-sm text-gray-500">All lecture recordings and published videos.</p>
         </div>
       </div>
-      <RecordingsClient recordings={mapped} />
+      <RecordingsClient recordings={mapped} batches={batches} />
     </div>
   );
 }
