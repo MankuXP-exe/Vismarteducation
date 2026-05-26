@@ -271,10 +271,15 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   // Keep ref in sync so rAF always calls latest
   drawFrameRef.current = drawFrame;
 
+  // Continuous rAF loop — never restarts, so captureStream never gaps
   useEffect(() => {
-    animFrameRef.current = requestAnimationFrame(drawFrameRef.current);
+    const loop = () => {
+      drawFrameRef.current();
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+    animFrameRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [drawFrame]);
+  }, []);
 
   // ─── Audio track management ──────────────────────────────────────
 
@@ -608,9 +613,9 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
       {/* Hidden canvas compositor */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Hidden video elements feeding the compositor (use opacity-0 NOT hidden to keep browser decoding frames) */}
-      <video ref={cameraVideoRef} className="opacity-0 absolute w-px h-px pointer-events-none" muted playsInline />
-      <video ref={screenVideoRef} className="opacity-0 absolute w-px h-px pointer-events-none" muted playsInline />
+      {/* Hidden video elements feeding the compositor (opacity-0 keeps decoder active, reasonable size prevents decode throttling) */}
+      <video ref={cameraVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "320px", height: "180px" }} muted playsInline />
+      <video ref={screenVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "320px", height: "180px" }} muted playsInline />
     </div>
   );
 }
