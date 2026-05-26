@@ -479,7 +479,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
               if (sender) {
                 const params = sender.getParameters();
                 if (!params.encodings) params.encodings = [{}];
-                params.encodings[0].maxBitrate = 1_500_000;   // 1.5 Mbps max
+                params.encodings[0].maxBitrate = 2_500_000;   // 2.5 Mbps
                 params.encodings[0].maxFramerate = 30;
                 sender.setParameters(params).catch(() => {});
               }
@@ -626,8 +626,8 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Hidden video elements feeding the compositor (opacity-0 keeps decoder active, reasonable size prevents decode throttling) */}
-      <video ref={cameraVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "320px", height: "180px" }} muted playsInline />
-      <video ref={screenVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "320px", height: "180px" }} muted playsInline />
+      <video ref={cameraVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "1280px", height: "720px" }} muted playsInline />
+      <video ref={screenVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "1280px", height: "720px" }} muted playsInline />
     </div>
   );
 }
