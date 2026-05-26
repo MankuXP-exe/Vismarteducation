@@ -15,14 +15,19 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
   const hlsRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [debugLog, setDebugLog] = useState("");
 
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     if (classStatus !== "live" || !hlsUrl) {
       setLoading(false);
       return;
     }
+
+    retryCountRef.current = 0;
+    setDebugLog("");
 
     let hls: any = null;
     let destroyed = false;
@@ -53,10 +58,19 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         });
 
         hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+          setDebugLog(
+            `Error type=${data.type} details=${data.details} fatal=${data.fatal} reason=${data.reason || ""} url=${data.url || ""}`
+          );
           if (data.fatal) {
+            retryCountRef.current++;
             hls?.destroy();
             hls = null;
             if (destroyed) return;
+            if (retryCountRef.current >= 5) {
+              setError("Stream error: " + (data.reason || data.details || "Failed to load stream"));
+              setLoading(false);
+              return;
+            }
             retryRef.current = setTimeout(tryLoad, 3000);
           }
         });
@@ -142,6 +156,11 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
           <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
           Live
         </span>
+        {debugLog && (
+          <span className="ml-2 text-[9px] text-gray-600 max-w-[300px] truncate" title={debugLog}>
+            {debugLog}
+          </span>
+        )}
       </div>
     </div>
   );
