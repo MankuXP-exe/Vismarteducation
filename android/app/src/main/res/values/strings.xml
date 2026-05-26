@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Vi Smart Learning Education</string>
+    <string name="title_activity_main">Vi Smart Learning Education</string>
+    <string name="package_name">com.vismart.app</string>
+    <string name="custom_url_scheme">com.vismart.app</string>
+</resources>

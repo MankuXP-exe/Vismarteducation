@@ -30,3 +30,17 @@ streaming-api-deploy.tar.gz
 .vercel
 .env*.local
 .env*
+
+# Capacitor / Android
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+android/keystore.jks
+android/app/google-services.json
+*.apk
+*.aab
+*.jks
+*.keystore
+local.properties
