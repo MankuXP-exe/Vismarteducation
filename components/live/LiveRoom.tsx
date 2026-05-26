@@ -21,10 +21,12 @@ export default function LiveRoom({ classId, role }: Props) {
   const [classData, setClassData] = useState<any>(null);
 
   useEffect(() => {
-    async function init() {
+    let cancelled = false;
+    async function fetchClass() {
       try {
         const res = await fetch(`/api/live/class/${classId}`);
         const json = await res.json();
+        if (cancelled) return;
         if (!res.ok || !json.data) {
           setError(json.error || "Class not found");
           setLoading(false);
@@ -39,11 +41,13 @@ export default function LiveRoom({ classId, role }: Props) {
         }
         setClassData(json.data);
       } catch (e: any) {
-        setError(e.message || "Failed to fetch class data");
+        if (!classData && !cancelled) setError(e.message || "Failed to fetch class data");
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
-    init();
+    fetchClass();
+    const pollId = role === "student" ? setInterval(fetchClass, 5000) : null;
+    return () => { cancelled = true; if (pollId) clearInterval(pollId); };
   }, [classId, role, router]);
 
   const startLive = useCallback(async () => {
