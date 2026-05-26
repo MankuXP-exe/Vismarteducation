@@ -165,6 +165,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
   const audioSenderRef = useRef<RTCRtpSender | null>(null);
+  const screenAudioSenderRef = useRef<RTCRtpSender | null>(null);
   const animFrameRef = useRef<number>(0);
 
   const [micOn, setMicOn] = useState(true);
@@ -176,23 +177,36 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   const [mode, setMode] = useState<Mode>("camera");
   const [pipSize, setPipSize] = useState<PipSize>("medium");
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const lastFrameTimeRef = useRef(0);
+  const TARGET_FPS = 30;
+  const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
-  // ─── Compositor loop ─────────────────────────────────────────────
+  // ─── Compositor loop (throttled to TARGET_FPS) ───────────────────
 
   const drawFrameRef = useRef<() => void>(() => {});
 
-  const drawFrame = useCallback(() => {
+  const drawFrame = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) { animFrameRef.current = requestAnimationFrame(drawFrameRef.current); return; }
+
+    // Throttle to TARGET_FPS
+    const elapsed = timestamp - lastFrameTimeRef.current;
+    if (elapsed < FRAME_INTERVAL) {
+      animFrameRef.current = requestAnimationFrame(drawFrameRef.current);
+      return;
+    }
+    lastFrameTimeRef.current = timestamp - (elapsed % FRAME_INTERVAL);
 
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     const isSelfFacing = facingMode === "user";
-    const hasScreen = screenOn && screenVideoRef.current?.readyState! >= 2;
-    const hasCamera = camOn && cameraVideoRef.current?.readyState! >= 2;
+    const scrReady = screenVideoRef.current?.readyState;
+    const camReady = cameraVideoRef.current?.readyState;
+    const hasScreen = screenOn && scrReady !== undefined && scrReady >= 2;
+    const hasCamera = camOn && camReady !== undefined && camReady >= 2;
 
     if (hasScreen && mode !== "camera") {
       drawAspectFill(ctx, screenVideoRef.current!, 0, 0, CANVAS_W, CANVAS_H);
@@ -274,6 +288,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
   // ─── Audio track management ──────────────────────────────────────
 
+  // Mic audio sender (always present)
   const switchAudioTrack = useCallback(async (newTrack: MediaStreamTrack | null) => {
     const sender = audioSenderRef.current;
     if (!sender) {
@@ -287,6 +302,24 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
       try { await sender.replaceTrack(newTrack); } catch { /* ignore */ }
     } else {
       try { await sender.replaceTrack(null); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Screen audio sender (added when screenshare has audio, removed when screen stops)
+  const setupScreenAudio = useCallback(async (screenAudioTrack: MediaStreamTrack | null) => {
+    const oldSender = screenAudioSenderRef.current;
+    if (oldSender) {
+      try {
+        const pc = pcRef.current;
+        if (pc) pc.removeTrack(oldSender);
+      } catch { /* ignore */ }
+      screenAudioSenderRef.current = null;
+    }
+    if (screenAudioTrack && pcRef.current) {
+      try {
+        const sender = pcRef.current.addTrack(screenAudioTrack, new MediaStream([screenAudioTrack]));
+        screenAudioSenderRef.current = sender;
+      } catch { /* ignore */ }
     }
   }, []);
 
@@ -324,14 +357,11 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
         cameraVideoRef.current.play().catch(() => {});
       }
 
-      // Set audio sender to mic audio track
+      // Set mic audio sender
       const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = micOn;
-        // Only set if screen isn't providing audio
-        if (!screenStreamRef.current?.getAudioTracks().length) {
-          await switchAudioTrack(audioTrack);
-        }
+        await switchAudioTrack(audioTrack);
       }
     } catch (err: any) {
       if (err.name !== "NotAllowedError" && err.name !== "NotFoundError") {
@@ -344,12 +374,10 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
   const toggleScreen = useCallback(async (enabled: boolean) => {
     if (!enabled) {
+      await setupScreenAudio(null);
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
       if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
-
-      const micAudio = cameraStreamRef.current?.getAudioTracks()[0];
-      if (micAudio) await switchAudioTrack(micAudio);
 
       setScreenOn(false);
       setMode((prev) => prev === "screen" || prev === "pip" ? "camera" : prev);
@@ -374,7 +402,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
       const screenAudio = stream.getAudioTracks()[0];
       if (screenAudio) {
-        await switchAudioTrack(screenAudio);
+        await setupScreenAudio(screenAudio);
       }
 
       setScreenOn(true);
@@ -382,7 +410,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
     } catch {
       setScreenOn(false);
     }
-  }, [switchAudioTrack]);
+  }, [setupScreenAudio]);
 
   // ─── Flip camera ─────────────────────────────────────────────────
 
@@ -590,9 +618,9 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
       {/* Hidden canvas compositor */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Hidden video elements feeding the compositor */}
-      <video ref={cameraVideoRef} className="hidden" muted playsInline />
-      <video ref={screenVideoRef} className="hidden" muted playsInline />
+      {/* Hidden video elements feeding the compositor (use opacity-0 NOT hidden to keep browser decoding frames) */}
+      <video ref={cameraVideoRef} className="opacity-0 absolute w-px h-px pointer-events-none" muted playsInline />
+      <video ref={screenVideoRef} className="opacity-0 absolute w-px h-px pointer-events-none" muted playsInline />
     </div>
   );
 }
