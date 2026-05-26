@@ -16,6 +16,8 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (classStatus !== "live" || !hlsUrl) {
       setLoading(false);
@@ -25,7 +27,7 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
     let hls: any = null;
     let destroyed = false;
 
-    async function init() {
+    async function tryLoad() {
       const Hls = (await import("hls.js")).default;
       if (destroyed) return;
 
@@ -36,7 +38,7 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
           backBufferLength: 30,
           maxLoadingDelay: 4,
           manifestLoadingTimeOut: 10000,
-          manifestLoadingMaxRetry: 3,
+          manifestLoadingMaxRetry: 1,
           levelLoadingTimeOut: 10000,
           fragLoadingTimeOut: 10000,
         });
@@ -51,15 +53,13 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
 
         hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
           if (data.fatal) {
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              hls?.recoverMediaError();
-              return;
-            }
-            setError("Stream error. The broadcast may have ended.");
-            setLoading(false);
+            hls?.destroy();
+            hls = null;
+            if (destroyed) return;
+            retryRef.current = setTimeout(tryLoad, 3000);
           }
         });
-      } else       if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl") && hlsUrl) {
+      } else if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl") && hlsUrl) {
         videoRef.current.src = hlsUrl;
         videoRef.current.addEventListener("loadedmetadata", () => {
           setLoading(false);
@@ -75,10 +75,11 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
       }
     }
 
-    init();
+    tryLoad();
 
     return () => {
       destroyed = true;
+      if (retryRef.current) clearTimeout(retryRef.current);
       if (hls) hls.destroy();
     };
   }, [classStatus, hlsUrl]);
