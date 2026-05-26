@@ -8,7 +8,7 @@ import {
   PhoneOff, Loader2, Signal, Wifi,
 } from "lucide-react";
 
-const WHIP_URL = "https://live.vismartlearningeducation.com/whip";
+const WHIP_BASE = "https://live.vismartlearningeducation.com";
 const AUTH = btoa("teacher:ViSmartLive2026!");
 const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
 
@@ -126,7 +126,8 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
           if (!offer) return;
 
           try {
-            const res = await fetch(`${WHIP_URL}?resource=live/${roomName}`, {
+            const whipUrl = `${WHIP_BASE}/live/${roomName}/whip`;
+            const res = await fetch(whipUrl, {
               method: "POST",
               headers: {
                 "Content-Type": "application/sdp",
