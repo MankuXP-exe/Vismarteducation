@@ -29,3 +29,4 @@ streaming-api-deploy.tar.gz
 .agents/
 .vercel
 .env*.local
+.env*
