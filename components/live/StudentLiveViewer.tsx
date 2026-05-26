@@ -48,12 +48,19 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 30,
-          maxLoadingDelay: 4,
-          manifestLoadingTimeOut: 10000,
+          backBufferLength: 15,
+          maxBufferLength: 15,
+          maxMaxBufferLength: 30,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: 6,
+          maxLoadingDelay: 2,
+          manifestLoadingTimeOut: 5000,
           manifestLoadingMaxRetry: 1,
-          levelLoadingTimeOut: 10000,
-          fragLoadingTimeOut: 10000,
+          levelLoadingTimeOut: 5000,
+          fragLoadingTimeOut: 5000,
+          startLevel: 0,
+          startFragPrefetch: true,
+          testBandwidth: false,
           xhrSetup: (xhr: XMLHttpRequest) => { xhr.withCredentials = true; },
         });
         hlsRef.current = hls;
@@ -64,19 +71,22 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
           setLoading(false);
           videoRef.current?.play().then(() => setPlaying(true)).catch(() => {});
         });
-
+        videoRef.current.addEventListener("waiting", () => setBuffering(true));
+        videoRef.current.addEventListener("canplay", () => setBuffering(false));
+        videoRef.current.addEventListener("playing", () => setBuffering(false));
         hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
           if (data.fatal) {
             retryCountRef.current++;
             hls?.destroy();
             hls = null;
             if (destroyed) return;
-            if (retryCountRef.current >= 5) {
+            if (retryCountRef.current >= 10) {
               setError("Stream error: " + (data.reason || data.details || "Failed to load stream"));
               setLoading(false);
               return;
             }
-            retryRef.current = setTimeout(tryLoad, 3000);
+            const delay = retryCountRef.current <= 3 ? 500 : 2000;
+            retryRef.current = setTimeout(tryLoad, delay);
           }
         });
       } else if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl") && hlsUrl) {

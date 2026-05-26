@@ -472,6 +472,18 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
           if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
             setLive(true);
             setConnecting(false);
+
+            // Cap video bitrate to prevent encoder spikes on scene changes
+            try {
+              const sender = pc.getSenders().find(s => s.track?.kind === "video");
+              if (sender) {
+                const params = sender.getParameters();
+                if (!params.encodings) params.encodings = [{}];
+                params.encodings[0].maxBitrate = 1_500_000;   // 1.5 Mbps max
+                params.encodings[0].maxFramerate = 30;
+                sender.setParameters(params).catch(() => {});
+              }
+            } catch { /* non-critical */ }
           } else if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
             setLive(false);
           }
