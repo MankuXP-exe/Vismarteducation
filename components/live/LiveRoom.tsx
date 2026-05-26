@@ -6,7 +6,7 @@ import { Loader2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import TeacherLiveStreamer from "./TeacherLiveStreamer";
 import StudentLiveViewer from "./StudentLiveViewer";
-import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
+
 import { useXP } from "@/hooks/useXP";
 
 type Props = { classId: string; role: "teacher" | "student" };
@@ -22,29 +22,25 @@ export default function LiveRoom({ classId, role }: Props) {
 
   useEffect(() => {
     async function init() {
-      if (!isSupabaseAdminConfigured) {
-        setError("Supabase not configured");
-        setLoading(false);
-        return;
-      }
-      const { data, error: err } = await supabaseAdmin
-        .from("live_classes")
-        .select("*, batch:batches(title)")
-        .eq("id", classId)
-        .single();
-      if (err || !data) {
-        setError(err?.message || "Class not found");
-        setLoading(false);
-        return;
-      }
-      if (data.status === "completed" || data.status === "cancelled") {
-        if (role === "teacher") {
-          toast("This class has already ended");
-          router.push("/teacher");
+      try {
+        const res = await fetch(`/api/live/class/${classId}`);
+        const json = await res.json();
+        if (!res.ok || !json.data) {
+          setError(json.error || "Class not found");
+          setLoading(false);
           return;
         }
+        if (json.data.status === "completed" || json.data.status === "cancelled") {
+          if (role === "teacher") {
+            toast("This class has already ended");
+            router.push("/teacher");
+            return;
+          }
+        }
+        setClassData(json.data);
+      } catch (e: any) {
+        setError(e.message || "Failed to fetch class data");
       }
-      setClassData(data);
       setLoading(false);
     }
     init();

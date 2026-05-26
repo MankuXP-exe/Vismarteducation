@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
+
 import { Loader2, Play, Pause, Maximize, Minimize, RotateCw, SkipBack, SkipForward } from "lucide-react";
 
 type Props = { classId: string };
@@ -52,10 +52,12 @@ export default function LiveRecording({ classId }: Props) {
 
   useEffect(() => {
     async function fetchData() {
-      if (!isSupabaseAdminConfigured) { setError("DB not configured"); setLoading(false); return; }
-      const { data: record, error: err } = await supabaseAdmin.from("live_classes").select("*").eq("id", classId).single();
-      if (err || !record) { setError(err?.message || "Not found"); setLoading(false); return; }
-      setData(record);
+      try {
+        const res = await fetch(`/api/live/class/${classId}`);
+        const json = await res.json();
+        if (!res.ok || !json.data) { setError(json.error || "Not found"); setLoading(false); return; }
+        setData(json.data);
+      } catch (e: any) { setError(e.message || "Failed to fetch"); }
       setLoading(false);
     }
     fetchData();
