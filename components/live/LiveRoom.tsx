@@ -46,8 +46,9 @@ export default function LiveRoom({ classId, role }: Props) {
       if (!cancelled) setLoading(false);
     }
     fetchClass();
-    const pollId = role === "student" ? setInterval(fetchClass, 5000) : null;
-    return () => { cancelled = true; if (pollId) clearInterval(pollId); };
+    const pollMs = role === "student" ? 5000 : 10000;
+    const pollId = setInterval(fetchClass, pollMs);
+    return () => { cancelled = true; clearInterval(pollId); };
   }, [classId, role, router]);
 
   const startLive = useCallback(async () => {

@@ -52,6 +52,12 @@ export async function POST(req: Request) {
       .single();
 
     if (!liveClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+
+    // If already completed/cancelled by webhook, return success (idempotent)
+    if (liveClass.status === "completed" || liveClass.status === "cancelled") {
+      return NextResponse.json({ success: true, status: liveClass.status });
+    }
+
     if (liveClass.status !== "live") {
       return NextResponse.json({ error: "Class is not currently live" }, { status: 400 });
     }
@@ -66,8 +72,8 @@ export async function POST(req: Request) {
 
     // Async: poll for recording URL set by MediaMTX webhook
     (async () => {
-      let recordingUrl = "";
-      for (let i = 0; i < 30; i++) {
+      let recordingUrl = liveClass.recording_url || "";
+      for (let i = 0; i < 30 && !recordingUrl; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         const { data: updated } = await supabaseAdmin
           .from("live_classes")
