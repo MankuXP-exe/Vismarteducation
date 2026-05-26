@@ -162,8 +162,9 @@ export default function LiveRoom({ classId, role }: Props) {
     );
   }
 
-  const hlsUrl = classData?.hls_url ||
+  const rawHlsUrl = classData?.hls_url ||
     `https://stream.vismartlearningeducation.com/live/live/${classData?.hms_room_id}/index.m3u8`;
+  const hlsUrl = rawHlsUrl.includes("?") ? rawHlsUrl : `${rawHlsUrl}?cookieCheck=1`;
 
   return (
     <StudentLiveViewer

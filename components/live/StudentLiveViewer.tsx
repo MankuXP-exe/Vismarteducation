@@ -41,6 +41,7 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
           manifestLoadingMaxRetry: 1,
           levelLoadingTimeOut: 10000,
           fragLoadingTimeOut: 10000,
+          xhrSetup: (xhr: XMLHttpRequest) => { xhr.withCredentials = true; },
         });
         hlsRef.current = hls;
         hls.loadSource(hlsUrl);
