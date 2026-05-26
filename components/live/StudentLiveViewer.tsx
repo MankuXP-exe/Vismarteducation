@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Wifi, Signal, PhoneOff } from "lucide-react";
+import { Loader2, Signal, PhoneOff } from "lucide-react";
 import LiveRecording from "./LiveRecording";
 
 type Props = {

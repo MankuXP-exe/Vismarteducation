@@ -111,6 +111,24 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
+        // Force H.264 for video so MediaMTX includes video in HLS output
+        // (VP8/VP9 are skipped by MediaMTX's HLS muxer)
+        const [videoTransceiver] = pc.getTransceivers().filter(
+          (t) => t.receiver.track.kind === "video"
+        );
+        if (videoTransceiver && typeof RTCRtpReceiver.getCapabilities === "function") {
+          const caps = RTCRtpReceiver.getCapabilities("video");
+          if (caps) {
+            const h264 = caps.codecs.filter((c) =>
+              c.mimeType.toLowerCase() === "video/h264" ||
+              c.mimeType.toLowerCase() === "video/x-h264"
+            );
+            if (h264.length > 0) {
+              videoTransceiver.setCodecPreferences(h264);
+            }
+          }
+        }
+
         pc.oniceconnectionstatechange = () => {
           if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
             setLive(true);
