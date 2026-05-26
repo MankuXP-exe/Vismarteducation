@@ -183,7 +183,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
   // ─── Compositor loop (throttled to TARGET_FPS) ───────────────────
 
-  const drawFrameRef = useRef<() => void>(() => {});
+  const drawFrameRef = useRef<(timestamp: number) => void>(() => {});
 
   const drawFrame = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
