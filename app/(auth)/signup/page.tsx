@@ -3,11 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -34,27 +32,25 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const { error: signupError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: {
-          full_name: form.fullName,
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          fullName: form.fullName,
           phone: form.phone,
-          current_class: form.currentClass,
-          role: "student",
-        },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (signupError) {
-      setError(signupError.message);
-      setLoading(false);
-      return;
+          currentClass: form.currentClass,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Signup failed");
+      window.location.href = "/login?message=Account created! Please sign in.";
+    } catch (err: any) {
+      setError(err.message);
     }
-
-    window.location.href = "/login?message=Account created! Please sign in.";
+    setLoading(false);
   };
 
   return (

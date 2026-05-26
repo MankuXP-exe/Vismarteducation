@@ -22,5 +22,24 @@ export async function POST(req: Request) {
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Also insert into profiles table
+  const { error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .insert({
+      id: data.user.id,
+      email,
+      full_name: fullName,
+      phone,
+      current_class: currentClass,
+      role,
+    });
+
+  if (profileError) {
+    // Cleanup auth user if profile insert fails
+    await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+    return NextResponse.json({ error: "Failed to create profile" }, { status: 500 });
+  }
+
   return NextResponse.json({ user: data.user });
 }
