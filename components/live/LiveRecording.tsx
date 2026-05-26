@@ -104,9 +104,16 @@ export default function LiveRecording({ classId }: Props) {
   };
 
   const toggleFS = () => {
-    if (!containerRef.current) return;
-    if (document.fullscreenElement) { document.exitFullscreen(); setFullscreen(false); }
-    else { containerRef.current.requestFullscreen(); setFullscreen(true); }
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      try { (document as any).exitFullscreen?.() ?? (document as any).webkitExitFullscreen?.(); } catch {}
+      setFullscreen(false);
+    } else {
+      try { (el as any).requestFullscreen?.() ?? (el as any).webkitRequestFullscreen?.(); } catch {}
+      try { (screen as any).orientation?.lock?.("landscape"); } catch {}
+      setFullscreen(true);
+    }
   };
 
   useEffect(() => {
@@ -158,12 +165,13 @@ export default function LiveRecording({ classId }: Props) {
 
         {/* Video Player */}
         <div ref={containerRef}
-          className="group relative aspect-video overflow-hidden rounded-xl bg-black"
+          className="video-container group relative aspect-video overflow-hidden rounded-xl bg-black"
           onMouseMove={showControlsTemporarily}
           onMouseLeave={() => playing && setShowControls(false)}>
           {videoUrl ? (
             <video ref={vidRef} src={videoUrl}
               className="h-full w-full cursor-pointer" playsInline preload="metadata"
+              style={{ objectFit: "contain", aspectRatio: "16 / 9" }}
               onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoaded}
               onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
               onEnded={() => setPlaying(false)}

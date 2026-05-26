@@ -131,12 +131,14 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
   }, []);
 
   const toggleFullscreen = useCallback(async () => {
-    if (!containerRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
     if (!document.fullscreenElement) {
-      await containerRef.current.requestFullscreen();
+      try { await (el as any).requestFullscreen?.() ?? (el as any).webkitRequestFullscreen?.(); } catch {}
+      try { await (screen as any).orientation?.lock?.("landscape"); } catch {}
       setFullscreen(true);
     } else {
-      await document.exitFullscreen();
+      try { await (document as any).exitFullscreen?.() ?? (document as any).webkitExitFullscreen?.(); } catch {}
       setFullscreen(false);
     }
   }, []);
@@ -214,7 +216,8 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
   return (
     <div
       ref={containerRef}
-      className="relative flex h-full w-full bg-black overflow-hidden group"
+      className="relative flex h-full w-full bg-black overflow-hidden group video-container"
+      style={{ aspectRatio: "16 / 9" }}
       onMouseMove={showControlsTemporarily}
       onTouchStart={showControlsTemporarily}
     >
@@ -224,7 +227,8 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         playsInline
         muted={muted}
         onClick={togglePlay}
-        className="h-full w-full object-contain cursor-pointer"
+        className="h-full w-full cursor-pointer"
+        style={{ objectFit: "contain", aspectRatio: "16 / 9" }}
       />
 
       {/* Buffering spinner */}
