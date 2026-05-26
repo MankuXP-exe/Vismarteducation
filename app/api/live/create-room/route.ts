@@ -3,7 +3,6 @@ import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 import { notifyBatchStudents } from "@/lib/notifications";
-import { EgressClient, EncodedFileOutput, EncodingOptionsPreset, EncodedFileType } from "livekit-server-sdk";
 
 function abbreviationFromName(name: string) {
   return name
@@ -30,12 +29,7 @@ async function ensureSubject(batchId: string, subjectId?: string, subjectName?: 
 
   const { data, error } = await supabaseAdmin
     .from("subjects")
-    .insert({
-      batch_id: batchId,
-      name,
-      abbreviation: abbreviationFromName(name),
-      is_active: true,
-    })
+    .insert({ batch_id: batchId, name, abbreviation: abbreviationFromName(name), is_active: true })
     .select("id")
     .single();
 
@@ -71,13 +65,7 @@ async function ensureChapter(batchId: string, subjectId: string | null, chapterI
 
   const { data, error } = await supabaseAdmin
     .from("chapters")
-    .insert({
-      batch_id: batchId,
-      subject_id: subjectId,
-      chapter_number: nextNumber,
-      title,
-      is_active: true,
-    })
+    .insert({ batch_id: batchId, subject_id: subjectId, chapter_number: nextNumber, title, is_active: true })
     .select("id")
     .single();
 
@@ -88,10 +76,7 @@ async function ensureChapter(batchId: string, subjectId: string | null, chapterI
 export async function POST(req: Request) {
   try {
     const supabase = await createRouteClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: profile } = await supabase
@@ -113,20 +98,6 @@ export async function POST(req: Request) {
     const chapterId = await ensureChapter(body.batchId, subjectId, body.chapterId, body.chapterTitle);
     const roomName = body.roomName || `class-${crypto.randomUUID()}`;
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
-    const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
-    const roomRes = await fetch(`${apiUrl}/live/create-room`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-secret": apiSecret,
-      },
-      body: JSON.stringify({ roomName }),
-    });
-
-    const room = await roomRes.json();
-    if (!roomRes.ok) throw new Error(room.error ?? "Unable to create room on VPS");
-
     const { data: liveClass, error } = await supabaseAdmin
       .from("live_classes")
       .insert({
@@ -146,40 +117,6 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    // Start LiveKit Egress recording (room composite -> mp4 -> MinIO)
-    const egressClient = new EgressClient(
-      `http://187.127.172.181:7880`,
-      "devkey",
-      "secret"
-    );
-    const fileName = `${roomName}-${Date.now()}.mp4`;
-    const expectedUrl = `https://stream.vismartlearningeducation.com/recordings/${body.batchId}/${fileName}`;
-    egressClient.startRoomCompositeEgress(
-      roomName,
-      new EncodedFileOutput({
-        filepath: `recordings/${body.batchId}/${fileName}`,
-        fileType: EncodedFileType.MP4,
-        output: {
-          case: "s3",
-          value: {
-            accessKey: "egresskey",
-            secret: "egresssecret",
-            endpoint: "http://187.127.172.181:9000",
-            bucket: "recordings",
-            forcePathStyle: true,
-          },
-        },
-      }),
-      {
-        encodingOptions: EncodingOptionsPreset.H264_1080P_30,
-        layout: "grid",
-      }
-    ).then(async () => {
-      try { await supabaseAdmin.from("live_classes").update({ recording_url: expectedUrl }).eq("id", liveClass.id); } catch {}
-    }).catch((err) => {
-      console.error("Failed to start egress:", err);
-    });
-
     notifyBatchStudents(
       body.batchId,
       profile?.full_name || "Teacher",
@@ -188,7 +125,7 @@ export async function POST(req: Request) {
       `${process.env.NEXT_PUBLIC_APP_URL || "https://vismartlearningeducation.com"}/dashboard/live/${liveClass.id}`
     );
 
-    return NextResponse.json({ liveClass, room });
+    return NextResponse.json({ liveClass });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

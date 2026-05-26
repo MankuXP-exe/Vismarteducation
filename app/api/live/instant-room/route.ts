@@ -4,7 +4,6 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 import { notifyBatchStudents } from "@/lib/notifications";
 
-
 function abbreviationFromName(name: string) {
   const letters = name
     .split(/\s+/)
@@ -26,13 +25,7 @@ async function ensureSubject(batchId: string, subjectName: string | null) {
   if (existing?.id) return existing.id;
   const { data, error } = await supabaseAdmin
     .from("subjects")
-    .insert({
-      batch_id: batchId,
-      name,
-      abbreviation: abbreviationFromName(name),
-      sort_order: 0,
-      is_active: true,
-    })
+    .insert({ batch_id: batchId, name, abbreviation: abbreviationFromName(name), sort_order: 0, is_active: true })
     .select("id")
     .single();
   if (error) throw error;
@@ -61,24 +54,7 @@ export async function POST(req: Request) {
     }
 
     const subjectId = await ensureSubject(body.batchId, body.subjectName || null);
-
     const roomName = `class-${crypto.randomUUID()}`;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.vismartlearningeducation.com";
-    const apiSecret = process.env.VPS_API_SECRET || process.env.API_SECRET || "random_secret_key_123";
-
-    const roomRes = await fetch(`${apiUrl}/live/create-room`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-secret": apiSecret,
-      },
-      body: JSON.stringify({ roomName }),
-    });
-
-    if (!roomRes.ok) {
-      const roomErr = await roomRes.json();
-      throw new Error(roomErr.error ?? "Unable to create room on VPS");
-    }
 
     const { data: liveClass, error } = await supabaseAdmin
       .from("live_classes")
@@ -91,22 +67,13 @@ export async function POST(req: Request) {
         scheduled_at: new Date().toISOString(),
         duration_minutes: body.durationMinutes || 60,
         hms_room_id: roomName,
-        status: "live",
+        status: "scheduled",
         started_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (error) throw error;
-
-    // Start VPS ffmpeg recording (saves directly to local filesystem)
-    fetch(`${apiUrl}/record/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-secret": apiSecret },
-      body: JSON.stringify({ roomName, liveClassId: liveClass.id, batchId: body.batchId, title: body.title || "Instant Live Class" }),
-    }).catch((err) => {
-      console.error("Failed to start VPS recording:", err);
-    });
 
     notifyBatchStudents(
       body.batchId,

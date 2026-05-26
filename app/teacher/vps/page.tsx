@@ -36,7 +36,7 @@ const API_BASE = "https://api.vismartlearningeducation.com";
 
 const SERVICE_ICONS: Record<string, typeof Server> = {
   nginx: Monitor,
-  "livekit-server": Activity,
+  mediamtx: Activity,
   minio: Database,
   "redis-server": Database,
   "vi-smart-api": Server,
@@ -44,7 +44,7 @@ const SERVICE_ICONS: Record<string, typeof Server> = {
 
 const SERVICE_LABELS: Record<string, string> = {
   nginx: "Nginx",
-  "livekit-server": "LiveKit",
+  mediamtx: "MediaMTX",
   minio: "MinIO",
   "redis-server": "Redis",
   "vi-smart-api": "API Server",
