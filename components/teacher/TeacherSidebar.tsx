@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard, Package, Users, CreditCard, Monitor, BarChart3,
-  Video, Radio, Menu, X, PlusCircle, GraduationCap, FileVideo, Upload, Zap, Bell
+  Video, Radio, Menu, X, PlusCircle, GraduationCap, FileVideo, Upload, Zap, Bell,
+  BookText, BookOpen
 } from "lucide-react";
 
 const links = [
@@ -13,6 +14,7 @@ const links = [
   { href: "/teacher/students", label: "Students", icon: GraduationCap },
   { href: "/teacher/batches", label: "Batches", icon: Package },
   { href: "/teacher/subjects", label: "Subjects", icon: BookText },
+  { href: "/teacher/chapters", label: "Chapters", icon: BookOpen },
   { href: "/teacher/lectures", label: "Lectures", icon: FileVideo },
   { href: "/teacher/tests", label: "Tests", icon: FileText },
   { href: "/teacher/materials", label: "Materials", icon: Upload },
