@@ -259,13 +259,13 @@ function UploadModal({ batches, onClose }: { batches: Batch[]; onClose: () => vo
       }
 
       const formData = new FormData();
-      formData.set("video", videoFile);
       formData.set("batchId", batchId);
       formData.set("subjectName", finalSubject);
       formData.set("subjectId", tokenData.subjectId || "");
       formData.set("chapterId", tokenData.chapterId || "");
       formData.set("title", title);
       formData.set("description", description);
+      formData.set("video", videoFile);
 
       const thumbFile = thumbRef.current?.files?.[0];
       if (thumbFile) formData.set("thumbnail", thumbFile);
