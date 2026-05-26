@@ -177,26 +177,16 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   const [mode, setMode] = useState<Mode>("camera");
   const [pipSize, setPipSize] = useState<PipSize>("medium");
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
-  const lastFrameTimeRef = useRef(0);
-  const TARGET_FPS = 30;
-  const FRAME_INTERVAL = 1000 / TARGET_FPS;
+  // ─── Compositor loop ──────────────────────────────────────────────
+  // Always paint every rAF frame to keep canvas.captureStream(30) alive.
+  // captureStream samples at 30fps internally, so painting at 60fps is fine.
 
-  // ─── Compositor loop (throttled to TARGET_FPS) ───────────────────
+  const drawFrameRef = useRef<() => void>(() => {});
 
-  const drawFrameRef = useRef<(timestamp: number) => void>(() => {});
-
-  const drawFrame = useCallback((timestamp: number) => {
+  const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) { animFrameRef.current = requestAnimationFrame(drawFrameRef.current); return; }
-
-    // Throttle to TARGET_FPS
-    const elapsed = timestamp - lastFrameTimeRef.current;
-    if (elapsed < FRAME_INTERVAL) {
-      animFrameRef.current = requestAnimationFrame(drawFrameRef.current);
-      return;
-    }
-    lastFrameTimeRef.current = timestamp - (elapsed % FRAME_INTERVAL);
 
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.fillStyle = "#111";
