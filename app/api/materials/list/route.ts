@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
   try {
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
     const chapterId = searchParams.get("chapterId");
     const type = searchParams.get("type");
 
-    let query = supabase
+    let query = supabaseAdmin
       .from("study_materials")
       .select(`*, subjects(name), chapters(title)`)
       .order("created_at", { ascending: false });
