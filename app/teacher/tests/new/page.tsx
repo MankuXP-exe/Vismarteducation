@@ -22,8 +22,15 @@ export default function NewTestPage() {
 
   useEffect(() => {
     fetch("/api/batches").then(r => r.json()).then(d => setBatches(d.batches || [])).catch(() => {});
-    fetch("/api/subjects").then(r => r.json()).then(d => setSubjects(d.subjects || [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!form.batchId) { setSubjects([]); return; }
+    fetch(`/api/subjects?batchId=${form.batchId}`)
+      .then(r => r.json())
+      .then(d => setSubjects(d.subjects || []))
+      .catch(() => setSubjects([]));
+  }, [form.batchId]);
 
   const addQuestion = () => {
     setQuestions([...questions, { question: "", optionA: "", optionB: "", optionC: "", optionD: "", correctOption: "a", explanation: "", marks: 1 }]);
