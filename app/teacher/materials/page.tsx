@@ -80,6 +80,7 @@ export default function TeacherMaterialsPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -388,12 +389,28 @@ export default function TeacherMaterialsPage() {
                   {m.subjects?.name}{m.chapters?.title ? ` · ${m.chapters.title}` : ""}
                 </div>
               )}
-              <a href={m.file_url} download={m.file_name || m.title}
+              <button onClick={() => setPreviewUrl(m.file_url)}
                 className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700">
-                <Download size={12} /> Download
-              </a>
+                <Download size={12} /> Open
+              </button>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPreviewUrl(null)}>
+          <div className="relative flex h-full w-full max-w-5xl flex-col rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+              <span className="text-sm font-medium text-gray-700">Preview</span>
+              <button onClick={() => setPreviewUrl(null)} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe src={previewUrl} className="h-full w-full" title="File preview" />
+            </div>
+          </div>
         </div>
       )}
     </div>
