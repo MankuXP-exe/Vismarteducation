@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Search, Download, ExternalLink, BookOpen, ChevronRight, FileIcon } from "lucide-react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 
 interface Material {
   id: string;
@@ -16,7 +15,7 @@ interface Material {
   material_type: string;
   created_at: string;
   batch_id: string;
-  batches: { name: string } | null;
+  batches: { title: string } | null;
   subjects: { name: string } | null;
   chapters: { title: string } | null;
 }
@@ -53,34 +52,13 @@ export default function StudentMaterialsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const supabase = createClient();
 
   useEffect(() => {
-    loadMaterials();
+    fetch("/api/materials/student")
+      .then((r) => r.json())
+      .then((d) => { setMaterials(d.materials || []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
-
-  const loadMaterials = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    const { data: enrollments } = await supabase
-      .from("enrollments")
-      .select("batch_id")
-      .eq("user_id", user.id)
-      .eq("status", "active");
-
-    const batchIds = enrollments?.map((e) => e.batch_id) || [];
-    if (batchIds.length === 0) { setMaterials([]); setLoading(false); return; }
-
-    const { data } = await supabase
-      .from("study_materials")
-      .select("*, batches(name), subjects(name), chapters(title)")
-      .in("batch_id", batchIds)
-      .order("created_at", { ascending: false });
-
-    setMaterials(data || []);
-    setLoading(false);
-  };
 
   const filtered = materials.filter((m) => {
     if (typeFilter !== "all" && m.material_type !== typeFilter) return false;
@@ -141,15 +119,15 @@ export default function StudentMaterialsPage() {
                 {m.file_size_bytes ? <span>{formatSize(m.file_size_bytes)}</span> : null}
               </div>
               <div className="mt-1.5 text-[11px] text-gray-400">
-                {m.batches?.name && <span>{m.batches.name}</span>}
+                {m.batches?.title && <span>{m.batches.title}</span>}
                 {m.subjects?.name && <span> · {m.subjects.name}</span>}
                 {m.chapters?.title && <span> · {m.chapters.title}</span>}
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <a href={m.file_url} target="_blank" rel="noreferrer"
+                <button onClick={() => window.open(m.file_url, "_blank")}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-purple-50 py-2 text-xs font-medium text-purple-600 hover:bg-purple-100 transition-colors">
                   <ExternalLink size={12} /> Open
-                </a>
+                </button>
                 <a href={m.file_url} download={m.file_name || m.title}
                   className="flex items-center justify-center rounded-xl border border-gray-200 p-2 text-gray-400 hover:bg-gray-50 transition-colors"
                   title="Download">
