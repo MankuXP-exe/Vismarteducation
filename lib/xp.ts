@@ -53,6 +53,21 @@ export async function awardXP(
     xpProfile = data;
   }
 
+  // Prevent duplicate daily_login XP
+  if (action === "daily_login" && xpProfile.last_active_date === today) {
+    const { data: existingLog } = await supabaseAdmin
+      .from("xp_logs")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("action", "daily_login")
+      .gte("created_at", today)
+      .maybeSingle();
+    if (existingLog) {
+      const xp = await getUserXP(userId);
+      return { xpEarned: 0, newLevel: xp?.level || 1, streakDays: xp?.streakDays || 0, newBadges: [] };
+    }
+  }
+
   let streakDays = xpProfile.streak_days || 0;
   const lastActive = xpProfile.last_active_date;
 

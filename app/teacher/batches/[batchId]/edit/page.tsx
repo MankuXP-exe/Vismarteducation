@@ -4,10 +4,10 @@ import EditBatchForm from "./EditBatchForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditBatchPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function EditBatchPage({ params }: { params: Promise<{ batchId: string }> }) {
+  const { batchId } = await params;
 
-  const { data: batch } = await supabaseAdmin.from("batches").select("*").eq("id", id).single();
+  const { data: batch } = await supabaseAdmin.from("batches").select("*").eq("id", batchId).single();
   if (!batch) notFound();
 
   return (

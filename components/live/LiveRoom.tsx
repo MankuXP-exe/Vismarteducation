@@ -66,12 +66,12 @@ export default function LiveRoom({ classId, role }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start live class");
       setClassData((prev: any) => ({ ...prev, status: "live" }));
-      awardXP("live_class", { classId });
+      if (role === "student") awardXP("live_class", { classId });
     } catch (err: any) {
       toast.error(err.message);
     }
     setLoading(false);
-  }, [classId, classData, awardXP]);
+  }, [classId, classData, awardXP, role]);
 
   const stopLive = useCallback(async () => {
     setEnding(true);
@@ -84,13 +84,13 @@ export default function LiveRoom({ classId, role }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to end class");
       toast.success("Live class ended");
-      awardXP("live_class", { classId });
+      if (role === "student") awardXP("live_class", { classId });
       router.push("/teacher");
     } catch (err: any) {
       toast.error(err.message);
       setEnding(false);
     }
-  }, [classId, router, awardXP]);
+  }, [classId, router, awardXP, role]);
 
   if (loading) {
     return (

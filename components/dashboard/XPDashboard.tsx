@@ -35,10 +35,11 @@ export default function XPDashboard() {
       .catch(() => setLoading(false));
 
     // Award daily login XP once per day
-    const awarded = sessionStorage.getItem("xp_daily_login");
-    if (!awarded) {
+    const today = new Date().toISOString().split("T")[0];
+    const lastLoginXp = localStorage.getItem("xp_daily_login");
+    if (lastLoginXp !== today) {
       awardXP("daily_login").then(() => {
-        sessionStorage.setItem("xp_daily_login", "true");
+        localStorage.setItem("xp_daily_login", today);
       });
     }
   }, [awardXP]);
