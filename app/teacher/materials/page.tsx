@@ -388,9 +388,9 @@ export default function TeacherMaterialsPage() {
                   {m.subjects?.name}{m.chapters?.title ? ` · ${m.chapters.title}` : ""}
                 </div>
               )}
-              <a href={m.file_url} target="_blank" rel="noreferrer"
+              <a href={m.file_url} download={m.file_name || m.title}
                 className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700">
-                <Download size={12} /> Open File
+                <Download size={12} /> Download
               </a>
             </motion.div>
           ))}
