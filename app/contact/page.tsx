@@ -79,24 +79,7 @@ export default function ContactPage() {
                   ))}
                 </div>
 
-                {/* Social */}
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Follow Us</h3>
-                  <div className="flex gap-3">
-                    {[
-                      { label: "WhatsApp", href: "https://wa.me/919821233879", color: "#25D366" },
-                      { label: "Instagram", href: "#", color: "#E4405F" },
-                      { label: "YouTube", href: "#", color: "#FF0000" },
-                      { label: "Facebook", href: "#", color: "#1877F2" },
-                    ].map((s) => (
-                      <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
-                        className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm transition-all hover:scale-110"
-                        style={{ background: s.color }}>
-                        {s.label.charAt(0)}
-                      </a>
-                    ))}
-                  </div>
-                </div>
+
               </motion.div>
 
               {/* Right: Form */}
