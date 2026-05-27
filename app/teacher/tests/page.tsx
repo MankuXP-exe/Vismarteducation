@@ -52,7 +52,7 @@ export default function TeacherTestsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tests</h1>
           <p className="text-sm text-gray-500">Create and manage tests for your batches</p>
@@ -79,42 +79,44 @@ export default function TeacherTestsPage() {
         <div className="space-y-3">
           {tests.map((test, i) => (
             <motion.div key={test.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-              className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 transition-all hover:shadow-md">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50">
-                <FileText size={22} className="text-purple-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-900">{test.title}</h3>
-                  {test.is_published ? (
-                    <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
-                      <CheckCircle size={10} /> Published
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-0.5 text-[10px] font-medium text-yellow-600">
-                      <XCircle size={10} /> Draft
-                    </span>
-                  )}
+              className="rounded-2xl border border-gray-100 bg-white p-4 transition-all hover:shadow-md sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-50">
+                  <FileText size={22} className="text-purple-600" />
                 </div>
-                <p className="mt-0.5 text-xs text-gray-400">
-                  {test.subjects?.name || "All subjects"} · {test.test_questions?.[0]?.count || 0} questions · {test.duration_minutes} min · {test.total_marks} marks
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => togglePublish(test.id, test.is_published)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    test.is_published ? "bg-yellow-50 text-yellow-600 hover:bg-yellow-100" : "bg-green-50 text-green-600 hover:bg-green-100"
-                  }`}>
-                  {test.is_published ? "Unpublish" : "Publish"}
-                </button>
-                <Link href={`/teacher/tests/${test.id}`}
-                  className="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-100">
-                  Manage
-                </Link>
-                <button onClick={() => deleteTest(test.id)}
-                  className="rounded-lg bg-red-50 p-1.5 text-red-400 hover:bg-red-100 hover:text-red-500">
-                  <Trash2 size={14} />
-                </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-gray-900">{test.title}</h3>
+                    {test.is_published ? (
+                      <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
+                        <CheckCircle size={10} /> Published
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-0.5 text-[10px] font-medium text-yellow-600">
+                        <XCircle size={10} /> Draft
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-400">
+                    {test.subjects?.name || "All subjects"} · {test.test_questions?.[0]?.count || 0} questions · {test.duration_minutes} min · {test.total_marks} marks
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button onClick={() => togglePublish(test.id, test.is_published)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                      test.is_published ? "bg-yellow-50 text-yellow-600 hover:bg-yellow-100" : "bg-green-50 text-green-600 hover:bg-green-100"
+                    }`}>
+                    {test.is_published ? "Unpublish" : "Publish"}
+                  </button>
+                  <Link href={`/teacher/tests/${test.id}`}
+                    className="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-100">
+                    Manage
+                  </Link>
+                  <button onClick={() => deleteTest(test.id)}
+                    className="rounded-lg bg-red-50 p-1.5 text-red-400 hover:bg-red-100 hover:text-red-500">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}

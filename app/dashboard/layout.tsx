@@ -18,7 +18,7 @@ export default function DashboardLayout({
       <TopNavbar />
       <Sidebar />
       <main
-        className="min-h-[calc(100vh-56px)] p-4 pt-[72px] lg:ml-[200px] lg:p-8 lg:pt-[72px]"
+        className="min-h-[calc(100vh-56px)] overflow-x-hidden p-4 pt-[72px] lg:ml-[200px] lg:p-8 lg:pt-[72px]"
       >
         {children}
       </main>

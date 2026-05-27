@@ -219,7 +219,7 @@ export default function TeacherChaptersPage() {
               {filtered.map((c) => (
                 <div key={c.id} className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300">
                   {editingId === c.id ? (
-                    <div className="flex flex-1 items-center gap-3">
+                    <div className="flex flex-1 flex-wrap items-center gap-3">
                       <input
                         type="text"
                         value={editNumber}
@@ -231,7 +231,7 @@ export default function TeacherChaptersPage() {
                         type="text"
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                        className="min-w-[120px] flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
                       />
                       <button onClick={() => handleSave(c.id)} disabled={saving}
                         className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700 disabled:opacity-50">
@@ -268,7 +268,7 @@ export default function TeacherChaptersPage() {
           )}
 
           <form onSubmit={handleAdd} className="rounded-xl border border-dashed border-gray-300 bg-white p-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <input
                 type="text"
                 value={newNumber}
@@ -281,7 +281,7 @@ export default function TeacherChaptersPage() {
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="New chapter title..."
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="min-w-[140px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
               <button
                 type="submit"

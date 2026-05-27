@@ -29,8 +29,8 @@ export default async function TeacherBatchesPage() {
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               <th className="px-4 py-3 text-left font-medium text-gray-600">Batch</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Category</th>
-              <th className="px-4 py-3 text-right font-medium text-gray-600">Price</th>
+              <th className="hidden px-4 py-3 text-left font-medium text-gray-600 md:table-cell">Category</th>
+              <th className="hidden px-4 py-3 text-right font-medium text-gray-600 md:table-cell">Price</th>
               <th className="px-4 py-3 text-center font-medium text-gray-600">Students</th>
               <th className="px-4 py-3 text-center font-medium text-gray-600">Status</th>
               <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
@@ -59,8 +59,8 @@ export default async function TeacherBatchesPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{batch.category}</td>
-                <td className="px-4 py-3 text-right font-medium">₹{batch.price?.toLocaleString("en-IN")}</td>
+                <td className="hidden px-4 py-3 text-gray-600 md:table-cell">{batch.category}</td>
+                <td className="hidden px-4 py-3 text-right font-medium md:table-cell">₹{batch.price?.toLocaleString("en-IN")}</td>
                 <td className="px-4 py-3 text-center">{batch.total_students ?? 0}</td>
                 <td className="px-4 py-3 text-center">
                   <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${batch.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>

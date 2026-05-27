@@ -93,31 +93,33 @@ export default function StudentTestsPage() {
                 const attempt = getAttempt(test.id);
                 return (
                   <motion.div key={test.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                    className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 transition-all hover:shadow-md">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-purple-50">
-                      <FileText size={24} className="text-purple-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-gray-900">{test.title}</h3>
-                      <p className="mt-0.5 text-xs text-gray-400">
-                        {test.subjects?.name || "General"} · {test.test_questions?.[0]?.count || 0} questions · {test.duration_minutes} min · {test.total_marks} marks
-                        {test.negative_marking > 0 && ` · -${test.negative_marking} for wrong`}
-                      </p>
-                      {attempt?.submitted_at && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${attempt.passed ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
-                            {attempt.passed ? "✅ Passed" : "❌ Failed"} · {attempt.percentage}%
+                    className="rounded-2xl border border-gray-100 bg-white p-4 transition-all hover:shadow-md sm:p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                      <div className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-purple-50">
+                        <FileText size={24} className="text-purple-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-gray-900">{test.title}</h3>
+                        <p className="mt-0.5 text-xs text-gray-400">
+                          {test.subjects?.name || "General"} · {test.test_questions?.[0]?.count || 0} questions · {test.duration_minutes} min · {test.total_marks} marks
+                          {test.negative_marking > 0 && ` · -${test.negative_marking} for wrong`}
+                        </p>
+                        {attempt?.submitted_at && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${attempt.passed ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+                              {attempt.passed ? "✅ Passed" : "❌ Failed"} · {attempt.percentage}%
+                            </div>
+                            <span className="text-[10px] text-gray-400">{attempt.score}/{attempt.total_marks} marks</span>
                           </div>
-                          <span className="text-[10px] text-gray-400">{attempt.score}/{attempt.total_marks} marks</span>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                      <button onClick={() => startTest(test.id)} disabled={starting === test.id}
+                        className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-40 sm:w-auto">
+                        {starting === test.id ? <Loader2 size={16} className="animate-spin" /> : <Trophy size={16} />}
+                        {attempt?.submitted_at ? "Retry" : attempt ? "Resume" : "Start"}
+                        <ChevronRight size={16} />
+                      </button>
                     </div>
-                    <button onClick={() => startTest(test.id)} disabled={starting === test.id}
-                      className="flex shrink-0 items-center gap-1.5 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-40">
-                      {starting === test.id ? <Loader2 size={16} className="animate-spin" /> : <Trophy size={16} />}
-                      {attempt?.submitted_at ? "Retry" : attempt ? "Resume" : "Start"}
-                      <ChevronRight size={16} />
-                    </button>
                   </motion.div>
                 );
               })}
