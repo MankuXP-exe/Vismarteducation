@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
     if (!attemptId) return NextResponse.json({ error: "attemptId required" }, { status: 400 });
 
     // Get attempt + test + questions
-    const { data: attempt } = await supabase
+    const { data: attempt } = await supabaseAdmin
       .from("test_attempts")
       .select("*, tests(*)")
       .eq("id", attemptId)
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
     if (!attempt) return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
     if (attempt.submitted_at) return NextResponse.json({ error: "Already submitted" }, { status: 400 });
 
-    const { data: questions } = await supabase
+    const { data: questions } = await supabaseAdmin
       .from("test_questions")
       .select("*")
       .eq("test_id", attempt.test_id)
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({ action: "test_attempt", metadata: { testId: attempt.test_id, score, passed } }),
     }).catch(() => {});
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("test_attempts")
       .update({
         answers,

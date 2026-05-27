@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
     if (!testId) return NextResponse.json({ error: "testId required" }, { status: 400 });
 
     // Check if already attempted
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from("test_attempts")
       .select("id, submitted_at")
       .eq("user_id", user.id)
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ attempt: existing });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("test_attempts")
       .insert({ user_id: user.id, test_id: testId })
       .select()

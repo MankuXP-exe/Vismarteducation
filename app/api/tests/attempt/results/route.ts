@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
     const attemptId = searchParams.get("attemptId");
     const testId = searchParams.get("testId");
 
-    let query = supabase
+    let query = supabaseAdmin
       .from("test_attempts")
       .select(`*, tests(*)`)
       .eq("user_id", user.id);
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
     // Get questions for review
     let questions: any[] = [];
     if (data && data.length > 0) {
-      const { data: qs } = await supabase
+      const { data: qs } = await supabaseAdmin
         .from("test_questions")
         .select("id, question, option_a, option_b, option_c, option_d, correct_option, explanation, marks, question_order")
         .eq("test_id", data[0].test_id)
