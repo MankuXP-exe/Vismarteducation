@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
     const { batchId, subjectId, title, description, durationMinutes, totalMarks, negativeMarking, passPercentage, startsAt, endsAt } = await req.json();
     if (!batchId || !title) return NextResponse.json({ error: "batchId and title required" }, { status: 400 });
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("tests")
       .insert({
         batch_id: batchId,

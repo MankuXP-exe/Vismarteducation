@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
     if (!testId || !question) return NextResponse.json({ error: "testId and question required" }, { status: 400 });
 
     // Get next order
-    const { data: last } = await supabase
+    const { data: last } = await supabaseAdmin
       .from("test_questions")
       .select("question_order")
       .eq("test_id", testId)
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
 
     const order = (last?.question_order ?? -1) + 1;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("test_questions")
       .insert({
         test_id: testId,
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
       .single();
 
     // Update total marks
-    await supabase.rpc("update_test_total_marks", { test_id: testId });
+    await supabaseAdmin.rpc("update_test_total_marks", { test_id: testId });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ question: data });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
   try {
@@ -12,14 +13,14 @@ export async function GET(req: Request) {
 
     if (testId) {
       const [qRes, tRes] = await Promise.all([
-        supabase.from("test_questions").select("*").eq("test_id", testId).order("question_order"),
-        supabase.from("tests").select("*").eq("id", testId).single(),
+        supabaseAdmin.from("test_questions").select("*").eq("test_id", testId).order("question_order"),
+        supabaseAdmin.from("tests").select("*").eq("id", testId).single(),
       ]);
       return NextResponse.json({ questions: qRes.data || [], test: tRes.data });
     }
 
     // Teacher view: get all tests with question counts
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("tests")
       .select(`*, subjects(name), test_questions(count)`)
       .order("created_at", { ascending: false });

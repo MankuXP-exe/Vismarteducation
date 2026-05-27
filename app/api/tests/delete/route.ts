@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function DELETE(req: Request) {
   try {
@@ -10,7 +11,7 @@ export async function DELETE(req: Request) {
     const { testId } = await req.json();
     if (!testId) return NextResponse.json({ error: "testId required" }, { status: 400 });
 
-    const { error } = await supabase.from("tests").delete().eq("id", testId);
+    const { error } = await supabaseAdmin.from("tests").delete().eq("id", testId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch { return NextResponse.json({ error: "Internal error" }, { status: 500 }); }
