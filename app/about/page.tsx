@@ -31,9 +31,7 @@ const values = [
 ];
 
 const team = [
-  { name: "Dr. Vikram Singh", role: "Founder & Director", desc: "20+ years in education, committed to making quality learning accessible." },
-  { name: "Ms. Priya Sharma", role: "Head of Academics", desc: "Curriculum expert specializing in CBSE and Commerce education." },
-  { name: "Mr. Amit Kumar", role: "Technical Lead", desc: "Building the future of digital learning at Vi Smart." },
+  { name: "Kudan Kumar", role: "Main Head", desc: "Leading Vi Smart Learning Education with a vision to make quality education accessible to all." },
 ];
 
 export default function AboutPage() {
@@ -127,10 +125,10 @@ export default function AboutPage() {
               <div className="mx-auto mt-3 w-14 h-1 rounded-full" style={{ background: "#fdd835" }} />
               <p className="text-gray-500 mt-3">Dedicated educators building the future of learning</p>
             </motion.div>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="flex justify-center">
               {team.map((m, i) => (
                 <motion.div key={m.name} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.12 }}
-                  className="bg-white rounded-2xl p-8 text-center shadow-lg border border-gray-100 hover:-translate-y-1 transition-all">
+                  className="bg-white rounded-2xl p-8 text-center shadow-lg border border-gray-100 hover:-translate-y-1 transition-all max-w-sm w-full">
                   <div className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white" style={{ background: "#5c35d9" }}>
                     {m.name.charAt(0)}
                   </div>
