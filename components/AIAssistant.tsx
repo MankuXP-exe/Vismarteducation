@@ -83,9 +83,9 @@ export default function AIAssistant() {
         onClick={() => setOpen(true)}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#5c35d9] text-white shadow-xl shadow-purple-500/30 transition-all hover:bg-[#4a28c7]"
+        className="fixed bottom-6 right-4 sm:right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#5c35d9] text-white shadow-xl shadow-purple-500/30 transition-all hover:bg-[#4a28c7]"
       >
-        <Bot size={26} />
+        <Bot size={22} className="sm:size-[26px]" />
       </motion.button>
 
       {/* Chat Panel */}
@@ -96,7 +96,7 @@ export default function AIAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-6 z-50 flex w-[360px] flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl"
+            className="fixed bottom-24 right-4 sm:right-6 z-50 flex w-[calc(100vw-32px)] sm:w-[360px] flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl"
             style={{ maxHeight: "calc(100vh - 160px)" }}
           >
             {/* Header */}

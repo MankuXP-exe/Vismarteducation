@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import XPDashboard from "@/components/dashboard/XPDashboard";
 import { MiniXPBadge } from "@/components/dashboard/MiniXPBadge";
-import BackButton from "@/components/ui/BackButton";
 
 export default function StudyPage() {
   const router = useRouter();

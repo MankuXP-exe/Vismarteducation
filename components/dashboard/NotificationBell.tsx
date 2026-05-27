@@ -88,7 +88,7 @@ export default function NotificationBell() {
 
       {open && (
         <div
-          className="absolute right-0 top-10 w-[360px] rounded-lg border border-gray-100 bg-white shadow-xl"
+          className="fixed max-sm:inset-x-4 max-sm:top-16 absolute sm:right-0 sm:top-10 w-[360px] max-sm:w-auto rounded-lg border border-gray-100 bg-white shadow-xl"
           style={{ maxHeight: "70vh" }}
         >
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
