@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     let query = supabaseAdmin
       .from("tests")
       .select(`*, subjects(name)`)
-      .eq("is_published", true)
+      .or("is_published.eq.true,is_published.is.null")
       .order("created_at", { ascending: false });
 
     if (batchId) query = query.eq("batch_id", batchId);
