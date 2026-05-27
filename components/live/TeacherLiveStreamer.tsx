@@ -511,7 +511,20 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
               throw new Error(text || `WHIP error ${res.status}`);
             }
 
-            const answer = await res.text();
+            let answer = await res.text();
+
+            // Sanitize SDP for Android WebView (Capacitor) which rejects a=recvonly at session level
+            const lines = answer.split("\n");
+            let seenMedia = false;
+            const sanitized = lines.filter((l) => {
+              if (l.startsWith("m=")) seenMedia = true;
+              if (l.trim() === "a=recvonly" && !seenMedia) return false;
+              return true;
+            });
+            if (sanitized.length !== lines.length) {
+              answer = sanitized.join("\n");
+            }
+
             await pc.setRemoteDescription({ type: "answer", sdp: answer });
 
             // Preview the composited canvas stream
