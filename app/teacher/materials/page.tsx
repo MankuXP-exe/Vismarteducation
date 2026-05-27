@@ -21,7 +21,7 @@ interface Material {
 
 interface Batch {
   id: string;
-  name: string;
+  title: string;
 }
 
 interface Subject {
@@ -222,7 +222,7 @@ export default function TeacherMaterialsPage() {
               <select value={form.batchId} onChange={(e) => setForm({...form, batchId: e.target.value})}
                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-purple-400">
                 <option value="">Select batch</option>
-                {batches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {batches.map((b) => <option key={b.id} value={b.id}>{b.title}</option>)}
               </select>
             </div>
 
