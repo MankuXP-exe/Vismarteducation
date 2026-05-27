@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server";
-import { createRouteClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const subjectId = searchParams.get("subjectId");
+  const batchId = searchParams.get("batchId");
 
   if (!subjectId) {
     return NextResponse.json({ error: "subjectId is required" }, { status: 400 });
   }
 
-  const supabase = await createRouteClient();
-  const { data: chapters } = await supabase
+  const query = supabaseAdmin
     .from("chapters")
-    .select("id, title, chapter_number")
+    .select("id, title, chapter_number, is_active")
     .eq("subject_id", subjectId)
     .eq("is_active", true)
-    .order("sort_order");
+    .order("sort_order", { ascending: true });
+
+  if (batchId) query.eq("batch_id", batchId);
+
+  const { data: chapters } = await query;
 
   return NextResponse.json({ chapters: chapters || [] });
 }

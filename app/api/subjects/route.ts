@@ -10,9 +10,9 @@ export async function GET(req: Request) {
   }
 
   try {
-    const { data: subjects } = await supabaseAdmin
+      const { data: subjects } = await supabaseAdmin
       .from("subjects")
-      .select("id, name, abbreviation")
+      .select("id, name, abbreviation, batch_id")
       .eq("batch_id", batchId)
       .eq("is_active", true)
       .order("sort_order");
@@ -27,18 +27,17 @@ export async function GET(req: Request) {
       .eq("id", batchId)
       .single();
 
-    let defaultSubjects: string[] = [];
+    let defaultSubjects: { id: string; name: string; abbreviation: string; batch_id: string }[] = [];
     if (batch?.subjects) {
-      if (Array.isArray(batch.subjects)) {
-        defaultSubjects = batch.subjects;
-      } else if (typeof batch.subjects === "string") {
-        defaultSubjects = (batch.subjects as string).split(",").map((s) => s.trim()).filter(Boolean);
-      }
+      const names: string[] = Array.isArray(batch.subjects)
+        ? batch.subjects
+        : typeof batch.subjects === "string"
+          ? (batch.subjects as string).split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+      defaultSubjects = names.map((name) => ({ id: "", name, abbreviation: "", batch_id: batchId }));
     }
 
-    return NextResponse.json({
-      subjects: defaultSubjects.map((name) => ({ id: "", name, abbreviation: "" })),
-    });
+    return NextResponse.json({ subjects: defaultSubjects });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

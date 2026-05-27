@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import toast from "react-hot-toast";
 import { BookOpen, Plus, X, Loader2, Search, ChevronLeft } from "lucide-react";
 
@@ -22,36 +21,37 @@ export default function TeacherChaptersPage() {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    if (!isSupabaseAdminConfigured) { setLoading(false); return; }
     loadBatches();
   }, []);
 
   async function loadBatches() {
-    const { data } = await supabaseAdmin.from("batches").select("id, title").order("title");
-    if (data) setBatches(data);
+    try {
+      const res = await fetch("/api/batches");
+      const json = await res.json();
+      if (json.batches) setBatches(json.batches.map((b: any) => ({ id: b.id, title: b.title })));
+    } catch {}
     setLoading(false);
   }
 
   async function loadSubjects(batchId: string) {
-    const { data } = await supabaseAdmin
-      .from("subjects")
-      .select("id, name, batch_id")
-      .eq("batch_id", batchId)
-      .eq("is_active", true)
-      .order("name");
-    setSubjects(data || []);
+    try {
+      const res = await fetch(`/api/subjects?batchId=${batchId}`);
+      const json = await res.json();
+      setSubjects(json.subjects || []);
+    } catch {
+      setSubjects([]);
+    }
   }
 
   async function loadChapters(subjectId: string) {
     if (!selectedBatch || !subjectId) return;
-    const { data } = await supabaseAdmin
-      .from("chapters")
-      .select("id, title, chapter_number, is_active")
-      .eq("batch_id", selectedBatch)
-      .eq("subject_id", subjectId)
-      .eq("is_active", true)
-      .order("chapter_number");
-    setChapters(data || []);
+    try {
+      const res = await fetch(`/api/chapters?batchId=${selectedBatch}&subjectId=${subjectId}`);
+      const json = await res.json();
+      setChapters(json.chapters || []);
+    } catch {
+      setChapters([]);
+    }
   }
 
   useEffect(() => {
