@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
 
@@ -120,24 +122,30 @@ export default function ConcessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-gray-50 py-6 sm:py-12 px-3 sm:px-4">
       <div className="mx-auto max-w-xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Fee Concession</h1>
-          <p className="text-gray-500 mt-2">Upload your document for automatic verification</p>
+        <div className="mb-4 sm:mb-8">
+          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-3 sm:mb-4 transition-colors">
+            <ChevronLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+          <div className="text-center">
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Fee Concession</h1>
+            <p className="text-gray-500 mt-1 sm:mt-2 text-sm sm:text-base">Upload your document for automatic verification</p>
+          </div>
         </div>
 
         {/* Steps indicator */}
-        <div className="flex items-center justify-center gap-2 mb-8 text-sm">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8 text-xs sm:text-sm">
           {["select", "upload", "result"].map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${step === s ? "bg-purple-600 text-white" : "bg-gray-200 text-gray-500"}`}>
+            <div key={s} className="flex items-center gap-1 sm:gap-2">
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm ${step === s ? "bg-purple-600 text-white" : "bg-gray-200 text-gray-500"}`}>
                 {step === "select" ? 1 : step === "upload" ? 2 : 3}
               </div>
-              <span className={step === s ? "text-purple-600 font-medium" : "text-gray-400"}>
+              <span className={`hidden sm:inline ${step === s ? "text-purple-600 font-medium" : "text-gray-400"}`}>
                 {s === "select" ? "Select Type" : s === "upload" ? "Upload Document" : "Result"}
               </span>
-              {i < 2 && <div className="w-8 h-px bg-gray-300" />}
+              {i < 2 && <div className="w-4 sm:w-8 h-px bg-gray-300" />}
             </div>
           ))}
         </div>
@@ -248,7 +256,7 @@ export default function ConcessionPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="bg-gray-50 rounded-lg p-3">
                 <p className="text-gray-400 text-xs">Confidence</p>
                 <p className="font-medium">{(result.ocrConfidence * 100).toFixed(0)}%</p>
