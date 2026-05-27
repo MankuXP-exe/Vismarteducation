@@ -120,48 +120,48 @@ public class ViSmartFirebaseMessagingService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager manager = getSystemService(NotificationManager.class);
 
-            manager.createNotificationChannel(new NotificationChannel(
+            NotificationChannel live = new NotificationChannel(
                     CHANNEL_LIVE, "Live Classes",
                     NotificationManager.IMPORTANCE_HIGH
-            ) {{
-                setDescription("Notifications for live class sessions");
-                setShowBadge(true);
-                enableLights(true);
-                enableVibration(true);
-            }});
+            );
+            live.setDescription("Notifications for live class sessions");
+            live.setShowBadge(true);
+            live.enableLights(true);
+            live.enableVibration(true);
+            manager.createNotificationChannel(live);
 
-            manager.createNotificationChannel(new NotificationChannel(
+            NotificationChannel recordings = new NotificationChannel(
                     CHANNEL_RECORDINGS, "New Recordings",
                     NotificationManager.IMPORTANCE_DEFAULT
-            ) {{
-                setDescription("When new lecture recordings are available");
-                setShowBadge(true);
-            }});
+            );
+            recordings.setDescription("When new lecture recordings are available");
+            recordings.setShowBadge(true);
+            manager.createNotificationChannel(recordings);
 
-            manager.createNotificationChannel(new NotificationChannel(
+            NotificationChannel exams = new NotificationChannel(
                     CHANNEL_EXAMS, "Tests & Exams",
                     NotificationManager.IMPORTANCE_HIGH
-            ) {{
-                setDescription("Test schedules, assignments and exam updates");
-                setShowBadge(true);
-                enableVibration(true);
-            }});
+            );
+            exams.setDescription("Test schedules, assignments and exam updates");
+            exams.setShowBadge(true);
+            exams.enableVibration(true);
+            manager.createNotificationChannel(exams);
 
-            manager.createNotificationChannel(new NotificationChannel(
+            NotificationChannel fee = new NotificationChannel(
                     CHANNEL_FEE, "Fee Reminders",
                     NotificationManager.IMPORTANCE_DEFAULT
-            ) {{
-                setDescription("Fee payment reminders and receipts");
-                setShowBadge(true);
-            }});
+            );
+            fee.setDescription("Fee payment reminders and receipts");
+            fee.setShowBadge(true);
+            manager.createNotificationChannel(fee);
 
-            manager.createNotificationChannel(new NotificationChannel(
+            NotificationChannel general = new NotificationChannel(
                     CHANNEL_GENERAL, "General",
                     NotificationManager.IMPORTANCE_DEFAULT
-            ) {{
-                setDescription("Other notifications");
-                setShowBadge(true);
-            }});
+            );
+            general.setDescription("Other notifications");
+            general.setShowBadge(true);
+            manager.createNotificationChannel(general);
         }
     }
 }
