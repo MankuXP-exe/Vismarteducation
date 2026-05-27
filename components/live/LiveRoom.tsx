@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, ChevronLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import TeacherLiveStreamer from "./TeacherLiveStreamer";
 import StudentLiveViewer from "./StudentLiveViewer";
@@ -99,6 +99,11 @@ export default function LiveRoom({ classId, role }: Props) {
           <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-purple-500" />
           <p className="text-base font-medium text-white/80">Joining live class...</p>
         </div>
+        <button onClick={() => router.back()}
+          className="absolute left-4 top-4 z-10 rounded-lg bg-gray-800/80 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-700 transition-colors">
+          <ChevronLeft className="inline h-3.5 w-3.5 mr-1" />
+          Exit
+        </button>
       </div>
     );
   }
@@ -106,6 +111,11 @@ export default function LiveRoom({ classId, role }: Props) {
   if (error) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950 p-4">
+        <button onClick={() => router.back()}
+          className="absolute left-4 top-4 z-10 rounded-lg bg-gray-800/80 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-700 transition-colors">
+          <ChevronLeft className="inline h-3.5 w-3.5 mr-1" />
+          Exit
+        </button>
         <div className="max-w-sm text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-800">
             <X className="h-8 w-8 text-red-400" />
@@ -125,8 +135,13 @@ export default function LiveRoom({ classId, role }: Props) {
     if (classData?.status === "scheduled") {
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950 p-4">
+          <button onClick={() => router.back()}
+            className="absolute left-4 top-4 z-10 rounded-lg bg-gray-800/80 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-700 transition-colors">
+            <ChevronLeft className="inline h-3.5 w-3.5 mr-1" />
+            Exit
+          </button>
           <div className="max-w-md text-center">
-            <h2 className="mb-2 text-2xl font-bold text-white">{classData.title}</h2>
+            <h2 className="mb-2 text-xl sm:text-2xl font-bold text-white">{classData.title}</h2>
             <p className="mb-6 text-sm text-gray-400">
               {classData.description || "Click below to start this live class"}
             </p>
@@ -151,6 +166,11 @@ export default function LiveRoom({ classId, role }: Props) {
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950 p-4">
+        <button onClick={() => router.back()}
+          className="absolute left-4 top-4 z-10 rounded-lg bg-gray-800/80 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-700 transition-colors">
+          <ChevronLeft className="inline h-3.5 w-3.5 mr-1" />
+          Exit
+        </button>
         <div className="max-w-sm text-center">
           <p className="text-lg font-bold text-white">Class status: {classData?.status}</p>
           <button onClick={() => router.back()}

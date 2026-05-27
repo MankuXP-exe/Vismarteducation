@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Loader2, Signal, PhoneOff, Maximize2, Minimize2,
+  Loader2, Signal, PhoneOff, Maximize2, Minimize2, ChevronLeft,
   Play, Pause, Volume2, VolumeX,
 } from "lucide-react";
 import LiveRecording from "./LiveRecording";
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Props) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<any>(null);
@@ -260,8 +262,12 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         </button>
       )}
 
-      {/* Top bar - LIVE badge */}
+      {/* Top bar - LIVE badge + Exit */}
       <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
+        <button onClick={() => router.back()} className="rounded-lg bg-black/40 px-2 py-1 text-[11px] font-medium text-white/80 hover:bg-black/60 transition-colors flex items-center gap-1">
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Exit
+        </button>
         <span className="flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg">
           <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
           Live

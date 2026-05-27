@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import toast from "react-hot-toast";
 
@@ -93,11 +95,17 @@ export default function TeacherConcessionsPage() {
     return true;
   });
 
+  const router = useRouter();
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <button onClick={() => router.back()} className="mb-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </button>
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Concession Requests</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Concession Requests</h1>
           <p className="text-sm text-gray-500">{requests.length} total requests</p>
         </div>
       </div>

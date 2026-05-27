@@ -1,3 +1,5 @@
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import StudentsClient from "./StudentsClient";
 
@@ -43,10 +45,14 @@ export default async function TeacherStudentsPage() {
   const { students, enrollments } = await getStudents();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <Link href="/teacher" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </Link>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Students</h1>
           <p className="text-sm text-gray-500">
             {students.length} registered student{students.length !== 1 ? "s" : ""}
           </p>

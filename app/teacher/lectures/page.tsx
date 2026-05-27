@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Play, Plus, Search, Loader2 } from "lucide-react";
+import { Play, Plus, Search, Loader2, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 interface Lecture {
@@ -34,11 +35,17 @@ export default function TeacherLecturesPage() {
     l.chapters?.title?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const router = useRouter();
+
   return (
     <div>
+      <button onClick={() => router.back()} className="mb-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </button>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">All Lectures</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Lectures</h1>
           <p className="text-sm text-gray-500">{lectures.length} total lectures</p>
         </div>
       </div>

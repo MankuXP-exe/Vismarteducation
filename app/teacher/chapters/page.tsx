@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 import toast from "react-hot-toast";
-import { BookOpen, Plus, X, Loader2, Search } from "lucide-react";
+import { BookOpen, Plus, X, Loader2, Search, ChevronLeft } from "lucide-react";
 
 type Batch = { id: string; title: string };
 type Subject = { id: string; name: string; batch_id: string };
@@ -106,10 +107,16 @@ export default function TeacherChaptersPage() {
     !search || c.title?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const router = useRouter();
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Chapters</h1>
+      <button onClick={() => router.back()} className="mb-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </button>
+      <div className="mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Chapters</h1>
         <p className="text-sm text-gray-500">Manage chapters across subjects and batches.</p>
       </div>
 

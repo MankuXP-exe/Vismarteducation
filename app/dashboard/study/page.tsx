@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Package, Clock, HelpCircle, Bookmark, User } from "lucide-react";
+import { Package, Clock, HelpCircle, Bookmark, User, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import XPDashboard from "@/components/dashboard/XPDashboard";
 import { MiniXPBadge } from "@/components/dashboard/MiniXPBadge";
+import BackButton from "@/components/ui/BackButton";
 
 export default function StudyPage() {
   const router = useRouter();
@@ -42,13 +43,16 @@ export default function StudyPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#5c35d9]/10">
+      <div className="mb-4 flex items-center gap-2 sm:gap-3">
+        <button onClick={() => router.push("/")} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100">
+          <ChevronLeft className="h-5 w-5 text-gray-500" />
+        </button>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#5c35d9]/10">
             <User size={16} className="text-[#5c35d9]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{displayName}</h1>
           </div>
         </div>
         <MiniXPBadge />
