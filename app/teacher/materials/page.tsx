@@ -74,6 +74,7 @@ export default function TeacherMaterialsPage() {
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [chapters, setChapters] = useState<{ id: string; title: string; chapter_number: number }[]>([]);
   const [form, setForm] = useState({ title: "", materialType: "notes", batchId: "", subjectId: "", chapterId: "" });
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -102,6 +103,19 @@ export default function TeacherMaterialsPage() {
       setSubjects([]);
     }
   }, [form.batchId]);
+
+  useEffect(() => {
+    if (form.subjectId) {
+      const params = new URLSearchParams({ subjectId: form.subjectId });
+      if (form.batchId) params.set("batchId", form.batchId);
+      fetch(`/api/chapters?${params}`)
+        .then((r) => r.json())
+        .then((d) => setChapters(d.chapters || []))
+        .catch(() => setChapters([]));
+    } else {
+      setChapters([]);
+    }
+  }, [form.subjectId, form.batchId]);
 
   const filtered = materials.filter((m) => {
     if (typeFilter !== "all" && m.material_type !== typeFilter) return false;
@@ -146,8 +160,8 @@ export default function TeacherMaterialsPage() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !form.batchId || !form.title) {
-      toast.error("File, batch, and title are required");
+    if (!selectedFile || !form.batchId || !form.chapterId || !form.title) {
+      toast.error("File, batch, chapter, and title are required");
       return;
     }
     setUploading(true);
@@ -219,7 +233,7 @@ export default function TeacherMaterialsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">Batch *</label>
-              <select value={form.batchId} onChange={(e) => setForm({...form, batchId: e.target.value})}
+              <select value={form.batchId} onChange={(e) => setForm({...form, batchId: e.target.value, subjectId: "", chapterId: ""})}
                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-purple-400">
                 <option value="">Select batch</option>
                 {batches.map((b) => <option key={b.id} value={b.id}>{b.title}</option>)}
@@ -228,11 +242,21 @@ export default function TeacherMaterialsPage() {
 
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">Subject</label>
-              <select value={form.subjectId} onChange={(e) => setForm({...form, subjectId: e.target.value})}
+              <select value={form.subjectId} onChange={(e) => setForm({...form, subjectId: e.target.value, chapterId: ""})}
                 disabled={!form.batchId}
                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-purple-400 disabled:opacity-40">
                 <option value="">{form.batchId ? "Select subject" : "Select batch first"}</option>
                 {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-500">Chapter *</label>
+              <select value={form.chapterId} onChange={(e) => setForm({...form, chapterId: e.target.value})}
+                disabled={!form.subjectId}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-purple-400 disabled:opacity-40">
+                <option value="">{form.subjectId ? "Select chapter" : "Select subject first"}</option>
+                {chapters.map((c) => <option key={c.id} value={c.id}>{c.chapter_number}. {c.title}</option>)}
               </select>
             </div>
 
@@ -301,7 +325,7 @@ export default function TeacherMaterialsPage() {
           )}
 
           <div className="mt-4 flex items-center gap-3">
-            <button onClick={handleUpload} disabled={uploading || !selectedFile || !form.batchId || !form.title}
+              <button onClick={handleUpload} disabled={uploading || !selectedFile || !form.batchId || !form.chapterId || !form.title}
               className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-40 transition-all">
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
               {uploading ? "Uploading..." : "Upload"}
