@@ -111,11 +111,16 @@ export default function AIAssistant() {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="fixed right-4 sm:right-6 z-50 flex w-[calc(100vw-32px)] sm:w-[360px] flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl"
-            style={{
-              bottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : "6rem",
-              maxHeight: keyboardOffset > 0
-                ? `calc(100svh - ${keyboardOffset + 70}px)`
-                : "calc(100vh - 160px)",
+            style={keyboardOffset > 0 ? {
+              top: "8px",
+              left: "8px",
+              right: "8px",
+              bottom: `${keyboardOffset + 8}px`,
+              width: "auto",
+              maxHeight: "none",
+            } : {
+              bottom: "6rem",
+              maxHeight: "calc(100vh - 160px)",
             }}
           >
             {/* Header */}
