@@ -60,6 +60,32 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PUT(req: Request) {
+  const denied = await checkAccess();
+  if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status });
+
+  try {
+    const { chapterId, title, chapterNumber } = await req.json();
+    if (!chapterId) return NextResponse.json({ error: "chapterId required" }, { status: 400 });
+
+    const updates: Record<string, any> = {};
+    if (title !== undefined) updates.title = title.trim();
+    if (chapterNumber !== undefined) updates.chapter_number = String(chapterNumber);
+
+    const { data, error } = await supabaseAdmin
+      .from("chapters")
+      .update(updates)
+      .eq("id", chapterId)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ success: true, chapter: data });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: Request) {
   const denied = await checkAccess();
   if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status });

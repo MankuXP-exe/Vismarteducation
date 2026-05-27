@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { BookOpen, Plus, X, Loader2, Search, ChevronLeft } from "lucide-react";
+import { BookOpen, Plus, X, Loader2, Search, ChevronLeft, Edit3, Check, Save } from "lucide-react";
 
 type Batch = { id: string; title: string };
 type Subject = { id: string; name: string; batch_id: string };
@@ -18,7 +18,12 @@ export default function TeacherChaptersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [newTitle, setNewTitle] = useState("");
+  const [newNumber, setNewNumber] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editNumber, setEditNumber] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadBatches();
@@ -72,12 +77,18 @@ export default function TeacherChaptersPage() {
       const res = await fetch("/api/admin/chapters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchId: selectedBatch, subjectId: selectedSubject, title: newTitle.trim() }),
+        body: JSON.stringify({
+          batchId: selectedBatch,
+          subjectId: selectedSubject,
+          title: newTitle.trim(),
+          chapterNumber: newNumber || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success(`Chapter "${newTitle.trim()}" added`);
       setNewTitle("");
+      setNewNumber("");
       loadChapters(selectedSubject);
     } catch (err: any) {
       toast.error(err.message);
@@ -100,6 +111,39 @@ export default function TeacherChaptersPage() {
       loadChapters(selectedSubject);
     } catch (err: any) {
       toast.error(err.message);
+    }
+  }
+
+  function startEdit(c: Chapter) {
+    setEditingId(c.id);
+    setEditTitle(c.title);
+    setEditNumber(c.chapter_number || "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitle("");
+    setEditNumber("");
+  }
+
+  async function handleSave(chapterId: string) {
+    if (!editTitle.trim()) { toast.error("Title is required"); return; }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/chapters", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chapterId, title: editTitle.trim(), chapterNumber: editNumber || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Chapter updated");
+      cancelEdit();
+      loadChapters(selectedSubject);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -174,39 +218,80 @@ export default function TeacherChaptersPage() {
             <div className="space-y-2 mb-6">
               {filtered.map((c) => (
                 <div key={c.id} className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-sm font-bold text-purple-700">
-                      {c.chapter_number || "?"}
-                    </span>
-                    <p className="font-medium text-gray-900">{c.title}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(c.id, c.title)}
-                    className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  {editingId === c.id ? (
+                    <div className="flex flex-1 items-center gap-3">
+                      <input
+                        type="text"
+                        value={editNumber}
+                        onChange={(e) => setEditNumber(e.target.value)}
+                        placeholder="#"
+                        className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-center"
+                      />
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                      />
+                      <button onClick={() => handleSave(c.id)} disabled={saving}
+                        className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700 disabled:opacity-50">
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      </button>
+                      <button onClick={cancelEdit} disabled={saving}
+                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-sm font-bold text-purple-700">
+                          {c.chapter_number || "?"}
+                        </span>
+                        <p className="font-medium text-gray-900">{c.title}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => startEdit(c)}
+                          className="rounded-lg p-2 text-gray-400 hover:bg-blue-50 hover:text-blue-600">
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => handleDelete(c.id, c.title)}
+                          className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          <form onSubmit={handleAdd} className="flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white p-4">
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="New chapter title..."
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-            <button
-              type="submit"
-              disabled={adding || !newTitle.trim()}
-              className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
-            >
-              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Add Chapter
-            </button>
+          <form onSubmit={handleAdd} className="rounded-xl border border-dashed border-gray-300 bg-white p-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                value={newNumber}
+                onChange={(e) => setNewNumber(e.target.value)}
+                placeholder="#"
+                className="w-16 rounded-lg border border-gray-300 px-2 py-2 text-sm text-center"
+              />
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="New chapter title..."
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={adding || !newTitle.trim()}
+                className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+              >
+                {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Add Chapter
+              </button>
+            </div>
           </form>
         </>
       )}
