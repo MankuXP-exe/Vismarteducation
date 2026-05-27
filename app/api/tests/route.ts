@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
     const batchId = searchParams.get("batchId");
     const subjectId = searchParams.get("subjectId");
 
-    let query = supabase
+    let query = supabaseAdmin
       .from("tests")
       .select(`*, subjects(name)`)
       .eq("is_published", true)

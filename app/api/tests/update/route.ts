@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function PUT(req: Request) {
   try {
@@ -10,7 +11,7 @@ export async function PUT(req: Request) {
     const { testId, ...updates } = await req.json();
     if (!testId) return NextResponse.json({ error: "testId required" }, { status: 400 });
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("tests")
       .update(updates)
       .eq("id", testId)

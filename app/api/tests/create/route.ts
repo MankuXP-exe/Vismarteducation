@@ -22,6 +22,7 @@ export async function POST(req: Request) {
         total_marks: totalMarks || 0,
         negative_marking: negativeMarking || 0,
         pass_percentage: passPercentage || 40,
+        is_published: true,
         starts_at: startsAt || null,
         ends_at: endsAt || null,
         created_by: user.id,
