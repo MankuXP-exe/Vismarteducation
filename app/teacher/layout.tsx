@@ -22,7 +22,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   return (
     <div className="min-h-screen bg-[#f7f8fc]">
       <TeacherSidebar />
-      <main className="min-h-screen md:ml-64 md:p-8">{children}</main>
+      <main className="min-h-screen px-4 pt-16 md:ml-64 md:p-8">{children}</main>
     </div>
   );
 }
