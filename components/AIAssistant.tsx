@@ -31,8 +31,21 @@ export default function AIAssistant() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handle = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height);
+      setKeyboardOffset(offset);
+    };
+    vv.addEventListener("resize", handle);
+    return () => vv.removeEventListener("resize", handle);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -84,6 +97,7 @@ export default function AIAssistant() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         className="fixed bottom-6 right-4 sm:right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#5c35d9] text-white shadow-xl shadow-purple-500/30 transition-all hover:bg-[#4a28c7]"
+        style={{ bottom: keyboardOffset > 0 ? `${keyboardOffset + 12}px` : undefined }}
       >
         <Bot size={22} className="sm:size-[26px]" />
       </motion.button>
@@ -96,8 +110,13 @@ export default function AIAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-4 sm:right-6 z-50 flex w-[calc(100vw-32px)] sm:w-[360px] flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl"
-            style={{ maxHeight: "calc(100vh - 160px)" }}
+            className="fixed right-4 sm:right-6 z-50 flex w-[calc(100vw-32px)] sm:w-[360px] flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl"
+            style={{
+              bottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : "6rem",
+              maxHeight: keyboardOffset > 0
+                ? `calc(100svh - ${keyboardOffset + 70}px)`
+                : "calc(100vh - 160px)",
+            }}
           >
             {/* Header */}
             <div className="flex items-center justify-between rounded-t-2xl bg-[#5c35d9] px-4 py-3 text-white">
