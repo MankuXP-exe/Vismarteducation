@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Plus, Trash2, Download, Search, Loader2, Upload, X, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
+import { isCapacitor, openUrl } from "@/lib/capacitor";
 
 interface Material {
   id: string;
@@ -389,7 +390,7 @@ export default function TeacherMaterialsPage() {
                   {m.subjects?.name}{m.chapters?.title ? ` · ${m.chapters.title}` : ""}
                 </div>
               )}
-              <button onClick={() => setPreviewUrl(m.file_url)}
+              <button onClick={() => isCapacitor() ? openUrl(m.file_url) : setPreviewUrl(m.file_url)}
                 className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700">
                 <Download size={12} /> Open
               </button>

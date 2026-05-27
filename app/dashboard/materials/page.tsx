@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Search, Download, ExternalLink, BookOpen, ChevronRight, FileIcon } from "lucide-react";
 import Link from "next/link";
+import { openUrl } from "@/lib/capacitor";
 
 interface Material {
   id: string;
@@ -124,7 +125,7 @@ export default function StudentMaterialsPage() {
                 {m.chapters?.title && <span> · {m.chapters.title}</span>}
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <button onClick={() => window.open(m.file_url, "_blank")}
+                <button onClick={() => openUrl(m.file_url)}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-purple-50 py-2 text-xs font-medium text-purple-600 hover:bg-purple-100 transition-colors">
                   <ExternalLink size={12} /> Open
                 </button>
