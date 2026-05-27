@@ -11,19 +11,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
 
-    const { data: enrollments } = await supabaseAdmin
-      .from("enrollments")
-      .select("batch_id")
-      .eq("user_id", user.id)
-      .eq("status", "active");
-
-    const batchIds = enrollments?.map((e) => e.batch_id) || [];
-    if (batchIds.length === 0) return NextResponse.json({ materials: [] });
-
     let query = supabaseAdmin
       .from("study_materials")
       .select("*, batches(title), subjects(name), chapters(title)")
-      .in("batch_id", batchIds)
       .order("created_at", { ascending: false });
 
     if (type) query = query.eq("material_type", type);
