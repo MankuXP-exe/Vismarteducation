@@ -8,15 +8,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import androidx.webkit.WebSettingsCompat;
 
 import com.getcapacitor.BridgeActivity;
-import com.getcapacitor.CapacitorWebView;
 
 public class MainActivity extends BridgeActivity {
 
@@ -36,10 +35,10 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    public void onLoad() {
-        super.onLoad();
+    protected void load() {
+        super.load();
 
-        CapacitorWebView webView = getBridge().getWebView();
+        WebView webView = getBridge().getWebView();
 
         webView.setWebChromeClient(new ViSmartChromeClient());
 
@@ -74,7 +73,7 @@ public class MainActivity extends BridgeActivity {
             hideCustomView();
             return;
         }
-        CapacitorWebView webView = getBridge().getWebView();
+        WebView webView = getBridge().getWebView();
         if (webView.canGoBack()) {
             webView.goBack();
         } else {
@@ -88,7 +87,10 @@ public class MainActivity extends BridgeActivity {
         customView.setVisibility(View.GONE);
 
         if (fullscreenContainer != null) {
-            removeView(fullscreenContainer);
+            ViewGroup parent = (ViewGroup) fullscreenContainer.getParent();
+            if (parent != null) {
+                parent.removeView(fullscreenContainer);
+            }
             fullscreenContainer = null;
         }
 
