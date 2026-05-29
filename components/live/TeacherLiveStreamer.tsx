@@ -537,9 +537,11 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
           }
         };
 
-        // 7. WHIP — send offer once ICE gathering completes
-        pc.onicecandidate = async (e) => {
-          if (e.candidate) return;
+        // 7. WHIP — send offer once ICE gathering completes (with timeout fallback)
+        let whipSent = false;
+        const sendWhip = async () => {
+          if (whipSent) return;
+          whipSent = true;
           const offer = pc.localDescription;
           if (!offer) return;
 
@@ -585,6 +587,13 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
             setConnecting(false);
           }
         };
+
+        pc.onicecandidate = (e) => {
+          if (!e.candidate) sendWhip();
+        };
+
+        // Fallback: if ICE gathering doesn't complete in 4s, send anyway
+        setTimeout(() => { if (!whipSent) sendWhip(); }, 4000);
 
         // 8. Create offer
         const offer = await pc.createOffer();
