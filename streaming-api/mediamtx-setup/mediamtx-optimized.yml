@@ -16,9 +16,9 @@ hls: yes
 hlsAddress: :8888
 hlsAlwaysRemux: yes
 hlsVariant: lowLatency
-hlsSegmentCount: 2
-hlsSegmentDuration: 200ms
-hlsPartDuration: 100ms
+hlsSegmentCount: 8
+hlsSegmentDuration: 500ms
+hlsPartDuration: 200ms
 hlsSegmentMaxSize: 5M
 hlsAllowOrigins: ['*']
 hlsEncryption: no
