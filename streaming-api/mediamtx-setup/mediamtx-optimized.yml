@@ -8,7 +8,6 @@ apiAllowOrigins: ['*']
 webrtc: yes
 webrtcAddress: :8889
 webrtcAllowOrigins: ['*']
-webrtcLocalUDPAddress: :8891
 webrtcAdditionalHosts: [187.127.172.181]
 webrtcICEServers2:
   - url: stun:stun.l.google.com:19302
