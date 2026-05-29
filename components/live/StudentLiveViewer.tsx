@@ -82,12 +82,12 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
             hls?.destroy();
             hls = null;
             if (destroyed) return;
-            if (retryCountRef.current >= 10) {
-              setError("Stream error: " + (data.reason || data.details || "Failed to load stream"));
+            if (retryCountRef.current >= 50) {
+              setError("Stream unavailable. The teacher may need to restart the stream.");
               setLoading(false);
               return;
             }
-            const delay = retryCountRef.current <= 3 ? 500 : 2000;
+            const delay = retryCountRef.current <= 5 ? 1000 : 3000;
             retryRef.current = setTimeout(tryLoad, delay);
           }
         });
