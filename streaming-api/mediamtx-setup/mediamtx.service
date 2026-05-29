@@ -1,0 +1,30 @@
+[Unit]
+Description=MediaMTX Streaming Server
+Documentation=https://github.com/bluenviron/mediamtx
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/mediamtx /etc/mediamtx/mediamtx.yml
+Restart=always
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Security hardening
+ProtectSystem=strict
+ReadWritePaths=/opt/vi-smart/recordings /opt/vi-smart/logs /opt/vi-smart/hooks
+NoNewPrivileges=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Environment
+Environment=HOME=/root
+
+[Install]
+WantedBy=multi-user.target

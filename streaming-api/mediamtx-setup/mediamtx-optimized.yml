@@ -1,0 +1,66 @@
+logLevel: warn
+logDestinations: [stdout]
+
+api: yes
+apiAddress: :9997
+apiAllowOrigins: ['*']
+
+webrtc: yes
+webrtcAddress: :8889
+webrtcAllowOrigins: ['*']
+webrtcLocalUDPAddress: :8891
+webrtcAdditionalHosts: [187.127.172.181]
+webrtcICEServers2:
+  - url: stun:stun.l.google.com:19302
+
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsSegmentCount: 4
+hlsSegmentDuration: 500ms
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 10M
+hlsAllowOrigins: ['*']
+hlsEncryption: no
+
+rtsp: yes
+rtspAddress: :8554
+rtspTransports: [udp, tcp]
+
+rtmp: no
+
+authInternalUsers:
+- user: teacher
+  pass: ViSmartLive2026!
+  ips: []
+  permissions:
+  - action: publish
+    path: ~^live/(.+)$
+  - action: read
+    path: ~^live/(.+)$
+
+- user: any
+  pass: ""
+  ips: []
+  permissions:
+  - action: read
+    path: ~^live/(.+)$
+
+- user: any
+  pass: ""
+  ips: ['127.0.0.1', '::1']
+  permissions:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+paths:
+  "~^live/(.+)$":
+    record: yes
+    recordPath: /opt/vi-smart/recordings/live/%path/%Y-%m-%d_%H-%M-%S.mp4
+    recordFormat: fmp4
+    recordPartDuration: 1s
+    recordSegmentDuration: 6h
+    runOnReady: 'curl -s -X POST http://127.0.0.1:3001/webhooks/stream-started -H "Content-Type: application/json" -d "{\"path\":\"$MTX_PATH\",\"secret\":\"mtx_webhook_ViSmart2026\"}" >> /opt/vi-smart/logs/hooks.log 2>&1'
+    runOnNotReady: 'curl -s -X POST http://127.0.0.1:3001/webhooks/stream-ended -H "Content-Type: application/json" -d "{\"path\":\"$MTX_PATH\",\"secret\":\"mtx_webhook_ViSmart2026\"}" >> /opt/vi-smart/logs/hooks.log 2>&1'

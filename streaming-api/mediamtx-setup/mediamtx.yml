@@ -1,0 +1,96 @@
+###############################################
+# MediaMTX - Vi Smart Education Streaming Server
+# Optimized for freeze-free live streaming
+###############################################
+
+# Log level: debug, info, warn, error
+logLevel: info
+logDestinations: [stdout]
+
+# ─── TCP/UDP Listener Ports ───────────────────
+rtsp: yes
+protocols: [udp, kcp, tcp]
+rtspAddress: :8554
+
+rtmp: yes
+rtmpAddress: :1935
+
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsSegmentCount: 4
+hlsSegmentDuration: 500ms
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 10MiB
+hlsEncryption: no
+
+webrtc: yes
+webrtcAddress: :8889
+# Public IP for ICE candidates (VPS public IP)
+webrtcAdditionalHosts: [187.127.172.181]
+webrtcICEUDPMuxAddress: :8890
+webrtcICETCPMuxAddress: :8189
+
+# SRT (optional, good for unreliable networks)
+srt: yes
+srtAddress: :1935
+
+# ─── Recording (Auto-Record) ─────────────────
+record: yes
+recordPath: /opt/vi-smart/recordings/{path}
+recordFormat: fmp4
+recordSegmentDuration: 1h
+recordDeleteAfter: 0
+
+# ─── Authentication ──────────────────────────
+# WHIP publish auth via basic auth
+# Credentials: teacher:ViSmartLive2026!
+api: yes
+apiAddress: :9997
+# API authentication (read-only for monitoring)
+apiUser: admin
+apiPassword: ViSmartAdmin2026!
+
+# ─── Path Configuration ──────────────────────
+paths:
+  # All paths are dynamically created
+  # Stream path pattern: live/{roomName}
+  # Recording saves to: /opt/vi-smart/recordings/live/{roomName}/
+
+  # Catch-all: allow any path
+  all_others:
+    # Allow publishing from any source
+    source: publisher
+
+    # Auto-record on demand
+    record: yes
+    recordPath: /opt/vi-smart/recordings/{path}
+    recordFormat: fmp4
+
+    # WebRTC playback (students)
+    webrtc: yes
+
+    # HLS playback (students fallback)
+    hls: yes
+
+    # RTSP relay
+    rtsp: yes
+
+    # RunOnDemand hooks
+    runOnDemand: /opt/vi-smart/hooks/on-demand.sh
+    runOnDemandCloseAfter: 10s
+    runOnReady: /opt/vi-smart/hooks/on-ready.sh
+    runOnNotReady: /opt/vi-smart/hooks/on-not-ready.sh
+    runOnRecord: /opt/vi-smart/hooks/on-record.sh
+
+# ─── Prometheus Metrics ──────────────────────
+metrics: no
+
+# ─── Pprof (debug, disable in production) ────
+pprof: no
+
+# ─── Path MTU (optimize for UDP) ─────────────
+# Use larger MTU for better performance
+writeQueueSize: 1024
+readQueueSize: 1024
