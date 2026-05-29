@@ -61,5 +61,5 @@ paths:
     recordFormat: fmp4
     recordPartDuration: 1s
     recordSegmentDuration: 6h
-    runOnReady: 'curl -s -X POST http://127.0.0.1:3001/webhooks/stream-started -H "Content-Type: application/json" -d "{\"path\":\"$MTX_PATH\",\"secret\":\"mtx_webhook_ViSmart2026\"}" >> /opt/vi-smart/logs/hooks.log 2>&1'
-    runOnNotReady: 'curl -s -X POST http://127.0.0.1:3001/webhooks/stream-ended -H "Content-Type: application/json" -d "{\"path\":\"$MTX_PATH\",\"secret\":\"mtx_webhook_ViSmart2026\"}" >> /opt/vi-smart/logs/hooks.log 2>&1'
+    runOnReady: /opt/vi-smart/hooks/on-ready.sh
+    runOnNotReady: /opt/vi-smart/hooks/on-not-ready.sh
