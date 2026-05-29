@@ -16,16 +16,16 @@ hls: yes
 hlsAddress: :8888
 hlsAlwaysRemux: yes
 hlsVariant: lowLatency
-hlsSegmentCount: 4
-hlsSegmentDuration: 500ms
-hlsPartDuration: 200ms
-hlsSegmentMaxSize: 10M
+hlsSegmentCount: 2
+hlsSegmentDuration: 200ms
+hlsPartDuration: 100ms
+hlsSegmentMaxSize: 5M
 hlsAllowOrigins: ['*']
 hlsEncryption: no
 
 rtsp: yes
 rtspAddress: :8554
-rtspTransports: [udp, tcp]
+rtspTransports: [tcp]
 
 rtmp: no
 

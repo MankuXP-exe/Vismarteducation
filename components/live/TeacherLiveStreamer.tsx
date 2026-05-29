@@ -9,9 +9,14 @@ import {
 
 const WHIP_BASE = "https://live.vismartlearningeducation.com";
 const AUTH = btoa("teacher:ViSmartLive2026!");
-const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+];
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
+const MAX_BITRATE = 1_500_000;
 const PIP_SIZES = { small: 200, medium: 280, large: 360 } as const;
 type PipSize = keyof typeof PIP_SIZES;
 type Mode = "camera" | "screen" | "pip";
@@ -368,11 +373,21 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   // ─── Screenshare toggle ──────────────────────────────────────────
 
   const toggleScreen = useCallback(async (enabled: boolean) => {
+    const pc = pcRef.current;
     if (!enabled) {
       await setupScreenAudio(null);
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
       if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+
+      // Swap back to camera track directly
+      if (pc && cameraStreamRef.current) {
+        const camTrack = cameraStreamRef.current.getVideoTracks()[0];
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender && camTrack) {
+          await sender.replaceTrack(camTrack);
+        }
+      }
 
       setScreenOn(false);
       setMode((prev) => prev === "screen" || prev === "pip" ? "camera" : prev);
@@ -381,7 +396,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
       });
       screenStreamRef.current = stream;
@@ -395,9 +410,36 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
         screenVideoRef.current.play().catch(() => {});
       }
 
+      // When screen share starts, swap to canvas compositor
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (canvas && ctx) {
+        const drawScreen = () => {
+          if (!screenVideoRef.current || !screenOn && !stream.active) return;
+          ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+          ctx.fillStyle = "#111";
+          ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+          if (mode === "screen" || mode === "pip") {
+            drawAspectFill(ctx, screenVideoRef.current, 0, 0, CANVAS_W, CANVAS_H);
+          }
+          requestAnimationFrame(drawScreen);
+        };
+        drawScreen();
+      }
+
       const screenAudio = stream.getAudioTracks()[0];
       if (screenAudio) {
         await setupScreenAudio(screenAudio);
+      }
+
+      // Swap video track to canvas stream for screen/pip mode
+      if (pc) {
+        const canvasStream = canvasRef.current!.captureStream(30);
+        const canvasVideoTrack = canvasStream.getVideoTracks()[0];
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender && canvasVideoTrack) {
+          await sender.replaceTrack(canvasVideoTrack);
+        }
       }
 
       setScreenOn(true);
@@ -405,7 +447,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
     } catch {
       setScreenOn(false);
     }
-  }, [setupScreenAudio]);
+  }, [setupScreenAudio, screenOn, mode]);
 
   // ─── Flip camera ─────────────────────────────────────────────────
 
@@ -422,7 +464,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
     async function init() {
       try {
-        // 1. Get camera
+        // 1. Get camera — use lower resolution for less encoding overhead
         const camStream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
           audio: true,
@@ -440,16 +482,21 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
         canvas.width = CANVAS_W;
         canvas.height = CANVAS_H;
         const canvasStream = canvas.captureStream(30);
-        const videoTrack = canvasStream.getVideoTracks()[0];
         const audioTrack = camStream.getAudioTracks()[0];
         if (audioTrack) audioTrack.enabled = micOn;
 
-        // 3. Create peer connection
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        // 3. Create peer connection with optimized settings
+        const pc = new RTCPeerConnection({
+          iceServers: ICE_SERVERS,
+          iceTransportPolicy: "all",
+          bundlePolicy: "max-bundle",
+          rtcpMuxPolicy: "require",
+        });
         pcRef.current = pc;
 
-        // 4. Add tracks — VIDEO from canvas (always), AUDIO from camera
-        pc.addTrack(videoTrack, canvasStream);
+        // 4. Add VIDEO — use camera directly in camera mode (skip canvas), canvas for screen modes
+        const camVideoTrack = camStream.getVideoTracks()[0];
+        pc.addTrack(camVideoTrack, camStream);
         if (audioTrack) {
           const sender = pc.addTrack(audioTrack, new MediaStream([audioTrack]));
           audioSenderRef.current = sender;
@@ -473,14 +520,15 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
             setLive(true);
             setConnecting(false);
 
-            // Cap video bitrate to prevent encoder spikes on scene changes
+            // Cap video bitrate — lower for stability
             try {
               const sender = pc.getSenders().find(s => s.track?.kind === "video");
               if (sender) {
                 const params = sender.getParameters();
                 if (!params.encodings) params.encodings = [{}];
-                params.encodings[0].maxBitrate = 2_500_000;   // 2.5 Mbps
+                params.encodings[0].maxBitrate = MAX_BITRATE;
                 params.encodings[0].maxFramerate = 30;
+                params.encodings[0].networkPriority = "high";
                 sender.setParameters(params).catch(() => {});
               }
             } catch { /* non-critical */ }
@@ -527,9 +575,9 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
             await pc.setRemoteDescription({ type: "answer", sdp: answer });
 
-            // Preview the composited canvas stream
+            // Preview the camera stream
             if (videoRef.current) {
-              videoRef.current.srcObject = canvasStream;
+              videoRef.current.srcObject = camStream;
               videoRef.current.play().catch(() => {});
             }
           } catch (err: any) {
