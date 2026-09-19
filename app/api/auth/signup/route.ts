@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -7,6 +9,29 @@ export async function POST(req: Request) {
 
   if (!email || !password || !fullName) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  // Progressive Migration: If VPS API enabled, try it first
+  if (isVpsApiEnabled()) {
+    try {
+      const { data, error } = await api.auth.register({
+        email,
+        password,
+        fullName,
+        phone,
+        currentClass,
+        role,
+      });
+
+      if (!error && data?.user) {
+        return NextResponse.json({ user: data.user });
+      }
+      if (error) {
+        return NextResponse.json({ error }, { status: 400 });
+      }
+    } catch {
+      // Fall through to Supabase
+    }
   }
 
   const { data, error } = await supabaseAdmin.auth.admin.createUser({

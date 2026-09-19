@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
+
 export default function LoginClient() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/dashboard";
@@ -21,6 +24,28 @@ export default function LoginClient() {
     setError("");
     setLoading(true);
 
+    // Progressive Migration: If VPS API enabled, try it first
+    if (isVpsApiEnabled()) {
+      try {
+        const { data, error: vpsError } = await api.auth.login({ email, password });
+        if (!vpsError && data?.success) {
+          if (data.sessionToken) {
+            try { localStorage.setItem("vi_session_token", data.sessionToken); } catch {}
+          }
+          window.location.href = redirect;
+          return;
+        }
+        if (vpsError) {
+          setError(vpsError);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // Fall through to Supabase on network exception
+      }
+    }
+
+    // Supabase fallback (production default)
     const { error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,

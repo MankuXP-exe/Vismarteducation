@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
 import { createRouteClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { getVpsSession } from "@/lib/auth/vps-session";
 
 export async function GET() {
+  if (isVpsApiEnabled()) {
+    try {
+      const vpsSession = await getVpsSession();
+      if (vpsSession?.authenticated && vpsSession.profile) {
+        return NextResponse.json({ profile: vpsSession.profile });
+      }
+    } catch {
+      // Fall through to Supabase
+    }
+  }
+
   const supabase = await createRouteClient();
   const {
     data: { user },

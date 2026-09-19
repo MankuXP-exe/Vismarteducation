@@ -5,6 +5,8 @@ import { checkBatchAccess } from "@/lib/auth/batch-access";
 import { api } from "@/lib/api/client";
 import { isVpsApiEnabled } from "@/lib/api/config";
 
+import { getVpsSession } from "@/lib/auth/vps-session";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(
@@ -18,14 +20,18 @@ export async function GET(
     try {
       const { data, error } = await api.batches.getBySlug(slug);
       if (!error && data?.batch) {
-        // Check access for authenticated users (students need enrollment)
-        const supabase = await createServerClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-          const access = await checkBatchAccess(user.id, data.batch.id, user);
-          if (!access.allowed) {
-            return NextResponse.json({ batch: null, accessDenied: true, reason: access.reason });
+        // VPS Mode: Check session using VPS API identity (zero Supabase calls)
+        const vpsSession = await getVpsSession();
+        if (vpsSession?.authenticated && vpsSession.user) {
+          const role = vpsSession.user.role;
+          const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
+          if (!isStaff && data.batch.is_active === false) {
+            const isEnrolled = vpsSession.enrollments?.some(
+              (e) => e.batch_id === data.batch.id && e.status === "active"
+            );
+            if (!isEnrolled) {
+              return NextResponse.json({ batch: null, accessDenied: true, reason: "Batch is not active" });
+            }
           }
         }
 

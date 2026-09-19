@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
 
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
+
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
@@ -39,28 +42,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
+    let active = true;
+
+    async function checkAuth() {
+      // Progressive Migration: If VPS API enabled, try it first
+      if (isVpsApiEnabled()) {
+        try {
+          const { data, error } = await api.auth.getMe();
+          if (!error && data?.authenticated && data.user) {
+            if (!active) return;
+            setUser({
+              id: data.user.id,
+              email: data.user.email,
+              app_metadata: { role: data.user.role },
+              user_metadata: {
+                full_name: data.profile?.full_name,
+                role: data.user.role,
+              },
+            } as any);
+            setProfile(data.profile ?? null);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Fall through to Supabase
+        }
       }
-    });
+
+      // Supabase fallback (production default)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!active) return;
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      });
+    }
+
+    checkAuth();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setLoading(false);
+      if (!isVpsApiEnabled()) {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile, supabase.auth]);
 
   const handleSignOut = async () => {
