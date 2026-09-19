@@ -1,0 +1,292 @@
+import { API_BASE_URL } from "./config";
+
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  details?: any;
+}
+
+export async function apiFetch<T = any>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<{ data: T | null; error: string | null }> {
+  const url = `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+
+  const headers = new Headers(options.headers || {});
+  if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include", // send and receive HTTP-only session cookies
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return {
+        data: null,
+        error: json.error || `Request failed with status ${res.status}`,
+      };
+    }
+
+    return { data: json as T, error: null };
+  } catch (err: any) {
+    return {
+      data: null,
+      error: err.message || "Network request to VPS API failed",
+    };
+  }
+}
+
+// ─── TYPED CLIENT MODULES ──────────────────────────────────────────
+
+export const api = {
+  // ── Auth
+  auth: {
+    async register(data: {
+      email: string;
+      password: string;
+      fullName: string;
+      phone?: string;
+      currentClass?: string;
+      role?: "student" | "teacher";
+    }) {
+      return apiFetch("/auth/register", { method: "POST", body: JSON.stringify(data) });
+    },
+    async login(data: { email: string; password: string }) {
+      return apiFetch("/auth/login", { method: "POST", body: JSON.stringify(data) });
+    },
+    async logout() {
+      return apiFetch("/auth/logout", { method: "POST" });
+    },
+    async getMe() {
+      return apiFetch("/auth/me");
+    },
+  },
+
+  // ── Batches
+  batches: {
+    async list(category?: string) {
+      const q = category && category !== "all" ? `?category=${encodeURIComponent(category)}` : "";
+      return apiFetch<{ batches: any[] }>(`/batches${q}`);
+    },
+    async getBySlug(idOrSlug: string) {
+      return apiFetch<{ batch: any }>(`/batches/${encodeURIComponent(idOrSlug)}`);
+    },
+    async getSubjects(batchId: string) {
+      return apiFetch<{ subjects: any[] }>(`/batches/${batchId}/subjects`);
+    },
+    async getChapters(subjectId: string) {
+      return apiFetch<{ chapters: any[] }>(`/batches/subjects/${subjectId}/chapters`);
+    },
+    async getLectures(chapterId: string) {
+      return apiFetch<{ lectures: any[] }>(`/batches/chapters/${chapterId}/lectures`);
+    },
+    async getMaterials(chapterId: string) {
+      return apiFetch<{ materials: any[] }>(`/batches/chapters/${chapterId}/materials`);
+    },
+  },
+
+  // ── Lectures & Streaming
+  lectures: {
+    async getById(id: string) {
+      return apiFetch<{ lecture: any; streamUrl?: string; playbackToken?: string }>(`/lectures/${id}`);
+    },
+    async updateProgress(
+      id: string,
+      progress: { watchedSeconds: number; totalSeconds: number; lastPosition?: number }
+    ) {
+      return apiFetch(`/lectures/${id}/progress`, {
+        method: "POST",
+        body: JSON.stringify(progress),
+      });
+    },
+    async getPlaybackToken(id: string) {
+      return apiFetch<{ playbackToken: string; streamUrl: string }>(`/lectures/${id}/playback-token`);
+    },
+    getStreamUrl(token: string) {
+      return `${API_BASE_URL}/recordings/stream/${encodeURIComponent(token)}`;
+    },
+  },
+
+  // ── Study Materials & Notes
+  notes: {
+    getDownloadUrl(id: string) {
+      return `${API_BASE_URL}/notes/${id}/download`;
+    },
+  },
+
+  // ── Live Streaming
+  live: {
+    async list(params?: { batchId?: string; status?: string }) {
+      const sp = new URLSearchParams();
+      if (params?.batchId) sp.set("batchId", params.batchId);
+      if (params?.status) sp.set("status", params.status);
+      const query = sp.toString() ? `?${sp.toString()}` : "";
+      return apiFetch<{ classes: any[] }>(`/live${query}`);
+    },
+    async getById(id: string) {
+      return apiFetch<{ liveClass: any }>(`/live/${id}`);
+    },
+    async getPlaybackToken(id: string) {
+      return apiFetch<{ token: string; status: string; whepUrl: string; hlsUrl: string }>(
+        `/live/${id}/playback-token`
+      );
+    },
+    async start(id: string) {
+      return apiFetch(`/live/${id}/start`, { method: "POST" });
+    },
+    async end(id: string) {
+      return apiFetch(`/live/${id}/end`, { method: "POST" });
+    },
+  },
+
+  // ── Tests & Assessments
+  tests: {
+    async list(batchId?: string) {
+      const q = batchId ? `?batchId=${batchId}` : "";
+      return apiFetch<{ tests: any[] }>(`/tests${q}`);
+    },
+    async getById(id: string) {
+      return apiFetch<{ test: any; hasCompleted: boolean; lastAttempt?: any }>(`/tests/${id}`);
+    },
+    async start(id: string) {
+      return apiFetch<{ attempt: any }>(`/tests/${id}/start`, { method: "POST" });
+    },
+    async submit(id: string, body: { attempt_id: string; answers: Record<string, string>; time_taken_seconds: number }) {
+      return apiFetch(`/tests/${id}/submit`, { method: "POST", body: JSON.stringify(body) });
+    },
+    async getAttempts(id: string) {
+      return apiFetch<{ attempts: any[] }>(`/tests/${id}/attempts`);
+    },
+    async getLeaderboard(id: string) {
+      return apiFetch<{ leaderboard: any[] }>(`/tests/${id}/leaderboard`);
+    },
+  },
+
+  // ── Doubts & AI Tutor
+  doubts: {
+    async list(params?: { batchId?: string; lectureId?: string; status?: string }) {
+      const sp = new URLSearchParams();
+      if (params?.batchId) sp.set("batchId", params.batchId);
+      if (params?.lectureId) sp.set("lectureId", params.lectureId);
+      if (params?.status) sp.set("status", params.status);
+      const query = sp.toString() ? `?${sp.toString()}` : "";
+      return apiFetch<{ doubts: any[] }>(`/doubts${query}`);
+    },
+    async getById(id: string) {
+      return apiFetch<{ doubt: any }>(`/doubts/${id}`);
+    },
+    async ask(body: {
+      question: string;
+      batch_id?: string;
+      lecture_id?: string;
+      subject_id?: string;
+      question_image_url?: string;
+      request_ai?: boolean;
+    }) {
+      return apiFetch(`/doubts`, { method: "POST", body: JSON.stringify(body) });
+    },
+    async answer(id: string, answer: string) {
+      return apiFetch(`/doubts/${id}/answer`, { method: "POST", body: JSON.stringify({ answer }) });
+    },
+  },
+
+  // ── Gamification & Leaderboard
+  gamification: {
+    async getProfile() {
+      return apiFetch<{ profile: any; badges: any[] }>("/gamification/profile");
+    },
+    async getBadges() {
+      return apiFetch<{ badges: any[] }>("/gamification/badges");
+    },
+    async getLeaderboard() {
+      return apiFetch<{ leaderboard: any[] }>("/gamification/leaderboard");
+    },
+    async dailyCheckin() {
+      return apiFetch<{ alreadyCheckedIn: boolean; streakDays: number; xpEarned?: number; message: string }>(
+        "/gamification/daily-checkin",
+        { method: "POST" }
+      );
+    },
+  },
+
+  // ── Bookmarks & History
+  bookmarks: {
+    async list() {
+      return apiFetch<{ bookmarks: any[] }>("/bookmarks");
+    },
+    async toggle(body: { lecture_id?: string; material_id?: string; bookmark_type?: string }) {
+      return apiFetch("/bookmarks", { method: "POST", body: JSON.stringify(body) });
+    },
+    async remove(id: string) {
+      return apiFetch(`/bookmarks/${id}`, { method: "DELETE" });
+    },
+  },
+  history: {
+    async list() {
+      return apiFetch<{ history: any[] }>("/history");
+    },
+    async record(body: { lecture_id: string; watched_seconds: number; total_seconds: number; completed?: boolean }) {
+      return apiFetch("/history", { method: "POST", body: JSON.stringify(body) });
+    },
+    async clear() {
+      return apiFetch("/history", { method: "DELETE" });
+    },
+  },
+
+  // ── Notifications
+  notifications: {
+    async list() {
+      return apiFetch<{ notifications: any[]; unreadCount: number }>("/notifications");
+    },
+    async markRead(id: string) {
+      return apiFetch(`/notifications/${id}/read`, { method: "PATCH" });
+    },
+    async markAllRead() {
+      return apiFetch("/notifications/mark-all-read", { method: "POST" });
+    },
+  },
+
+  // ── Concessions & Payments
+  concessions: {
+    async request(body: { concession_type: string; document_url: string; document_original_name?: string }) {
+      return apiFetch("/concessions/request", { method: "POST", body: JSON.stringify(body) });
+    },
+    async myRequests() {
+      return apiFetch<{ requests: any[] }>("/concessions/my-requests");
+    },
+  },
+  payments: {
+    async createOrder(batchId: string, concessionId?: string) {
+      return apiFetch("/payments/create-order", {
+        method: "POST",
+        body: JSON.stringify({ batch_id: batchId, concession_id: concessionId }),
+      });
+    },
+    async verify(data: {
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+    }) {
+      return apiFetch("/payments/verify", { method: "POST", body: JSON.stringify(data) });
+    },
+    async history() {
+      return apiFetch<{ payments: any[] }>("/payments/history");
+    },
+  },
+
+  // ── System
+  system: {
+    async health() {
+      return apiFetch("/system/health");
+    },
+    async ready() {
+      return apiFetch("/system/ready");
+    },
+  },
+};
