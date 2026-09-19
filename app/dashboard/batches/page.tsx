@@ -4,6 +4,9 @@ import { AlertCircle, CheckCircle, Package } from "lucide-react";
 import { getEffectiveRole } from "@/lib/auth/roles";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { getVpsSession } from "@/lib/auth/vps-session";
+import { api } from "@/lib/api/client";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +37,49 @@ function formatDate(value?: string | null) {
 }
 
 async function getVisibleBatches() {
+  // Progressive Migration: If VPS API enabled, fetch directly from Fastify / PostgreSQL
+  if (isVpsApiEnabled()) {
+    try {
+      const session = await getVpsSession();
+      if (!session || !session.authenticated) {
+        redirect("/login?redirect=/dashboard/batches");
+      }
+
+      const role = session.user.role;
+      const canManage = role === "teacher" || role === "admin" || role === "super_admin";
+
+      if (canManage) {
+        const { data: batchesData } = await api.batches.list();
+        const batches = batchesData?.batches ?? [];
+        return {
+          role,
+          cards: batches.map((batch: any) => ({
+            batch,
+            status: "active" as const,
+            accessEndDate: null,
+          })),
+        };
+      }
+
+      // Student: read from session.enrollments (which includes batches)
+      const enrollments = session.enrollments || [];
+      const cards: BatchCard[] = enrollments
+        .filter((e: any) => e.batches?.id || e.batch_id)
+        .map((e: any) => ({
+          batch: (e.batches || {
+            id: e.batch_id,
+            title: "Batch",
+          }) as BatchRow,
+          status: (e.status ?? "active") as BatchCard["status"],
+          accessEndDate: e.access_end_date as string | null,
+        }));
+
+      return { role, cards };
+    } catch {
+      // Fall through to Supabase on failure
+    }
+  }
+
   const supabase = await createServerClient();
   const {
     data: { user },

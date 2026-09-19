@@ -1,8 +1,39 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 export async function POST(req: Request) {
   try {
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const body = await req.clone().json().catch(() => ({}));
+          const { lectureId, watchedSeconds, totalSeconds, completed } = body;
+          if (!lectureId) return NextResponse.json({ error: "lectureId required" }, { status: 400 });
+
+          const authHeaders = { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` };
+          await Promise.all([
+            api.lectures.updateProgress(
+              lectureId,
+              { watchedSeconds: watchedSeconds || 0, totalSeconds: totalSeconds || 0 },
+              { headers: authHeaders }
+            ),
+            api.history.record(
+              { lectureId, watchedSeconds, totalSeconds, completed },
+              { headers: authHeaders }
+            ),
+          ]);
+          return NextResponse.json({ success: true });
+        }
+      } catch {
+        // Fallback to Supabase on failure
+      }
+    }
+
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

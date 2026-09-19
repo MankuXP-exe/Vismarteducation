@@ -1,6 +1,8 @@
 import { getEffectiveRole } from "./roles";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { User } from "@supabase/supabase-js";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { checkVpsBatchAccess } from "./vps-session";
 
 export type BatchAccessResult = {
   allowed: boolean;
@@ -13,6 +15,14 @@ export async function checkBatchAccess(
   batchId: string,
   user: User | null
 ): Promise<BatchAccessResult> {
+  if (isVpsApiEnabled()) {
+    try {
+      const vpsAccess = await checkVpsBatchAccess(batchId);
+      return vpsAccess;
+    } catch {
+      // Fall through to Supabase on exception
+    }
+  }
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("role")

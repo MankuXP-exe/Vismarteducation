@@ -60,8 +60,13 @@ export const api = {
     async login(data: { email: string; password: string }) {
       return apiFetch("/auth/login", { method: "POST", body: JSON.stringify(data) });
     },
-    async logout() {
-      return apiFetch("/auth/logout", { method: "POST" });
+    async logout(token?: string) {
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Cookie"] = `vi_session=${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      return apiFetch("/auth/logout", { method: "POST", headers });
     },
     async getMe() {
       return apiFetch("/auth/me");
@@ -106,12 +111,18 @@ export const api = {
     },
     async updateProgress(
       id: string,
-      progress: { watchedSeconds: number; totalSeconds: number; lastPosition?: number }
+      progress: { watchedSeconds: number; totalSeconds: number; lastPosition?: number },
+      options: RequestInit = {}
     ) {
       return apiFetch(`/lectures/${id}/progress`, {
+        ...options,
         method: "POST",
         body: JSON.stringify(progress),
       });
+    },
+    async getProgress(batchId?: string, options: RequestInit = {}) {
+      const q = batchId ? `?batchId=${encodeURIComponent(batchId)}` : "";
+      return apiFetch<{ progress: any[] }>(`/lectures/progress${q}`, options);
     },
     async getPlaybackToken(id: string) {
       return apiFetch<{ playbackToken: string; streamUrl: string }>(`/lectures/${id}/playback-token`);
@@ -234,25 +245,77 @@ export const api = {
 
   // ── Bookmarks & History
   bookmarks: {
-    async list() {
-      return apiFetch<{ bookmarks: any[] }>("/bookmarks");
+    async list(params?: { q?: string; sort?: string }, options: RequestInit = {}) {
+      const sp = new URLSearchParams();
+      if (params?.q) sp.set("q", params.q);
+      if (params?.sort) sp.set("sort", params.sort);
+      const query = sp.toString() ? `?${sp.toString()}` : "";
+      return apiFetch<{ bookmarks: any[] }>(`/bookmarks${query}`, options);
     },
-    async toggle(body: { lecture_id?: string; material_id?: string; bookmark_type?: string }) {
-      return apiFetch("/bookmarks", { method: "POST", body: JSON.stringify(body) });
+    async toggle(
+      body: {
+        lecture_id?: string;
+        material_id?: string;
+        lectureId?: string;
+        materialId?: string;
+        bookmark_type?: string;
+        bookmarkType?: string;
+        note_type?: string;
+        noteType?: string;
+        note_title?: string;
+        noteTitle?: string;
+        note_url?: string;
+        noteUrl?: string;
+      },
+      options: RequestInit = {}
+    ) {
+      return apiFetch("/bookmarks", {
+        ...options,
+        method: "POST",
+        body: JSON.stringify(body),
+      });
     },
-    async remove(id: string) {
-      return apiFetch(`/bookmarks/${id}`, { method: "DELETE" });
+    async remove(idOrBody: string | { bookmarkId: string }, options: RequestInit = {}) {
+      if (typeof idOrBody === "string") {
+        return apiFetch(`/bookmarks/${idOrBody}`, { ...options, method: "DELETE" });
+      }
+      return apiFetch(`/bookmarks`, {
+        ...options,
+        method: "DELETE",
+        body: JSON.stringify(idOrBody),
+      });
     },
   },
   history: {
-    async list() {
-      return apiFetch<{ history: any[] }>("/history");
+    async list(options: RequestInit = {}) {
+      return apiFetch<{ history: any[] }>("/history", options);
     },
-    async record(body: { lecture_id: string; watched_seconds: number; total_seconds: number; completed?: boolean }) {
-      return apiFetch("/history", { method: "POST", body: JSON.stringify(body) });
+    async record(
+      body: {
+        lecture_id?: string;
+        lectureId?: string;
+        watched_seconds?: number;
+        watchedSeconds?: number;
+        total_seconds?: number;
+        totalSeconds?: number;
+        completed?: boolean;
+      },
+      options: RequestInit = {}
+    ) {
+      const payload = {
+        lecture_id: body.lecture_id || body.lectureId,
+        watched_seconds: body.watched_seconds ?? body.watchedSeconds ?? 0,
+        total_seconds: body.total_seconds ?? body.totalSeconds ?? 0,
+        completed: body.completed || false,
+      };
+      return apiFetch("/history", {
+        ...options,
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     },
-    async clear() {
-      return apiFetch("/history", { method: "DELETE" });
+    async clear(options: RequestInit = {}) {
+      return apiFetch("/history", { ...options, method: "DELETE" });
     },
   },
 

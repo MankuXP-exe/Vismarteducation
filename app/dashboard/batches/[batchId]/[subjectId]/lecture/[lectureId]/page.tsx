@@ -6,6 +6,8 @@ import { getEffectiveRole } from "@/lib/auth/roles";
 import { checkBatchAccess } from "@/lib/auth/batch-access";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { getVpsSession, checkVpsBatchAccess } from "@/lib/auth/vps-session";
 import LectureRecordingUpload from "@/components/dashboard/LectureRecordingUpload";
 import LectureVideoPlayer from "@/components/dashboard/LectureVideoPlayer";
 import AccessDenied from "@/components/AccessDenied";
@@ -43,6 +45,20 @@ function formatDate(value?: string | null) {
 }
 
 async function getLecturePageData(batchId: string, subjectId: string, lectureId: string) {
+  if (isVpsApiEnabled()) {
+    try {
+      const session = await getVpsSession();
+      if (!session || !session.authenticated) {
+        redirect(`/login?redirect=/dashboard/batches/${batchId}/${subjectId}/lecture/${lectureId}`);
+      }
+
+      const access = await checkVpsBatchAccess(batchId);
+      if (!access.allowed) return { accessDenied: true, reason: access.reason };
+    } catch {
+      // Fall through to Supabase on failure
+    }
+  }
+
   const supabase = await createServerClient();
   const {
     data: { user },

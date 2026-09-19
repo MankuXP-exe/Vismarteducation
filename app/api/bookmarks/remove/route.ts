@@ -1,8 +1,34 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 export async function DELETE(req: Request) {
   try {
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const body = await req.clone().json().catch(() => ({}));
+          const { bookmarkId } = body;
+          if (!bookmarkId) {
+            return NextResponse.json({ error: "bookmarkId required" }, { status: 400 });
+          }
+          const { error } = await api.bookmarks.remove(
+            bookmarkId,
+            { headers: { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` } }
+          );
+          if (!error) {
+            return NextResponse.json({ success: true });
+          }
+        }
+      } catch {
+        // Fallback to Supabase on failure
+      }
+    }
+
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,4 +1,6 @@
 import { createClient } from "./client";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 // ═══════════════════════════════════════════════════════════════════
 // Vi Smart Learning Education — Supabase Query Helpers
@@ -225,15 +227,30 @@ export async function updateLectureProgress({
   batchId,
   watchedSeconds,
   totalSeconds,
-  lastPosition,
+  lastPosition = 0,
 }: {
   studentId: string;
   lectureId: string;
   batchId: string;
   watchedSeconds: number;
   totalSeconds: number;
-  lastPosition: number;
+  lastPosition?: number;
 }) {
+  if (isVpsApiEnabled()) {
+    try {
+      const { data, error } = await api.lectures.updateProgress(lectureId, {
+        watchedSeconds,
+        totalSeconds,
+        lastPosition,
+      });
+      if (!error) {
+        return { data, error: null };
+      }
+    } catch {
+      // Fall through to Supabase on failure
+    }
+  }
+
   const supabase = createClient();
   const completionPercent =
     totalSeconds > 0
@@ -268,6 +285,17 @@ export async function getStudentProgress(
   studentId: string,
   batchId: string
 ) {
+  if (isVpsApiEnabled()) {
+    try {
+      const { data, error } = await api.lectures.getProgress(batchId);
+      if (!error && data?.progress) {
+        return { data: data.progress, error: null };
+      }
+    } catch {
+      // Fall through to Supabase on failure
+    }
+  }
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("lecture_progress")

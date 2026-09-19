@@ -4,6 +4,9 @@ import { ChevronRight, FileText, Video } from "lucide-react";
 import { checkBatchAccess } from "@/lib/auth/batch-access";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { getVpsSession, checkVpsBatchAccess } from "@/lib/auth/vps-session";
+import { api } from "@/lib/api/client";
 import AccessDenied from "@/components/AccessDenied";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +43,47 @@ function abbreviation(subject: SubjectRow) {
 }
 
 async function getBatchPageData(batchId: string) {
+  // Progressive Migration: If VPS API enabled, fetch directly from Fastify / PostgreSQL
+  if (isVpsApiEnabled()) {
+    try {
+      const session = await getVpsSession();
+      if (!session || !session.authenticated) {
+        redirect(`/login?redirect=/dashboard/batches/${batchId}`);
+      }
+
+      const access = await checkVpsBatchAccess(batchId);
+      if (!access.allowed) {
+        return { accessDenied: true, reason: access.reason };
+      }
+
+      const [batchRes, subjectsRes, materialsRes, liveRes] = await Promise.all([
+        api.batches.getBySlug(batchId),
+        api.batches.getSubjects(batchId),
+        api.notes.list({ batchId }),
+        api.live.list({ batchId }),
+      ]);
+
+      if (batchRes.data?.batch) {
+        const batch = batchRes.data.batch;
+        const subjects = subjectsRes.data?.subjects ?? [];
+        const materials = materialsRes.data?.materials ?? [];
+        const liveClasses = liveRes.data?.classes ?? [];
+        const canManageLocal = access.role === "teacher" || access.role === "admin" || access.role === "super_admin";
+
+        return {
+          accessDenied: false as const,
+          batch,
+          subjects,
+          materials,
+          liveClasses,
+          canManage: canManageLocal,
+        };
+      }
+    } catch {
+      // Fall through to Supabase on failure
+    }
+  }
+
   const supabase = await createServerClient();
   const {
     data: { user },

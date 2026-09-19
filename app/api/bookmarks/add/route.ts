@@ -1,8 +1,34 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 export async function POST(req: Request) {
   try {
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const body = await req.clone().json().catch(() => ({}));
+          const { lectureId, noteTitle, noteUrl, noteType } = body;
+          if (!lectureId && !noteUrl) {
+            return NextResponse.json({ error: "lectureId or noteUrl required" }, { status: 400 });
+          }
+          const { data, error } = await api.bookmarks.toggle(
+            { lectureId, noteTitle, noteUrl, noteType },
+            { headers: { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` } }
+          );
+          if (!error) {
+            return NextResponse.json({ bookmark: data?.bookmark || data });
+          }
+        }
+      } catch {
+        // Fallback to Supabase on failure
+      }
+    }
+
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

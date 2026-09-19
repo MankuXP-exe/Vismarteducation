@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { Play, Tv } from "lucide-react";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { getVpsSession } from "@/lib/auth/vps-session";
+import { api } from "@/lib/api/client";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +20,43 @@ function timeAgo(dateStr: string) {
 }
 
 async function getRecentLearning() {
+  if (isVpsApiEnabled()) {
+    try {
+      const session = await getVpsSession();
+      if (!session || !session.authenticated) {
+        redirect("/login?redirect=/dashboard/study/recent");
+      }
+      const cookieStore = await cookies();
+      const token = cookieStore.get("vi_session")?.value;
+      const { data, error } = await api.lectures.getProgress(
+        undefined,
+        token ? { headers: { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` } } : {}
+      );
+      if (!error && data?.progress) {
+        return data.progress
+          .filter((p: any) => p.lectures?.id)
+          .map((p: any) => ({
+            progress: {
+              lecture_id: p.lecture_id,
+              batch_id: p.batch_id,
+              completion_percent: p.completion_percent,
+              last_watched_at: p.last_watched_at,
+            },
+            lecture: {
+              id: p.lectures.id,
+              title: p.lectures.title,
+              batch_id: p.lectures.batch_id,
+              subject_id: p.lectures.subject_id,
+              chapter_id: p.lectures.chapter_id,
+              cloudflare_thumbnail_url: p.lectures.cloudflare_thumbnail_url || p.lectures.thumbnail_url,
+            },
+          }));
+      }
+    } catch {
+      // Fall through to Supabase on failure
+    }
+  }
+
   const supabase = await createServerClient();
   const {
     data: { user },

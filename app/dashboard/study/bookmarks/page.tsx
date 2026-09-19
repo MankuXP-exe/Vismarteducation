@@ -1,12 +1,36 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { Bookmark, FileText, Play } from "lucide-react";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { getVpsSession } from "@/lib/auth/vps-session";
+import { api } from "@/lib/api/client";
 
 export const dynamic = "force-dynamic";
 
 async function getBookmarks() {
+  if (isVpsApiEnabled()) {
+    try {
+      const session = await getVpsSession();
+      if (!session || !session.authenticated) {
+        redirect("/login?redirect=/dashboard/study/bookmarks");
+      }
+      const cookieStore = await cookies();
+      const token = cookieStore.get("vi_session")?.value;
+      const { data, error } = await api.bookmarks.list(
+        undefined,
+        token ? { headers: { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` } } : {}
+      );
+      if (!error && data?.bookmarks) {
+        return data.bookmarks;
+      }
+    } catch {
+      // Fall through to Supabase on failure
+    }
+  }
+
   const supabase = await createServerClient();
   const {
     data: { user },

@@ -7,7 +7,9 @@ import { cookies } from "next/headers";
 export async function GET(req: Request) {
   if (isVpsApiEnabled()) {
     try {
-      await api.auth.logout();
+      const cookieStore = await cookies();
+      const token = cookieStore.get("vi_session")?.value;
+      await api.auth.logout(token);
     } catch {}
   }
 

@@ -29,9 +29,6 @@ export default function LoginClient() {
       try {
         const { data, error: vpsError } = await api.auth.login({ email, password });
         if (!vpsError && data?.success) {
-          if (data.sessionToken) {
-            try { localStorage.setItem("vi_session_token", data.sessionToken); } catch {}
-          }
           window.location.href = redirect;
           return;
         }
