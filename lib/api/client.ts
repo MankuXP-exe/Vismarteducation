@@ -150,26 +150,59 @@ export const api = {
 
   // ── Live Streaming
   live: {
-    async list(params?: { batchId?: string; status?: string }) {
+    async list(params?: { batchId?: string; status?: string }, options: RequestInit = {}) {
       const sp = new URLSearchParams();
       if (params?.batchId) sp.set("batchId", params.batchId);
       if (params?.status) sp.set("status", params.status);
       const query = sp.toString() ? `?${sp.toString()}` : "";
-      return apiFetch<{ classes: any[] }>(`/live${query}`);
+      return apiFetch<{ classes: any[]; liveClasses?: any[] }>(`/live${query}`, options);
     },
-    async getById(id: string) {
-      return apiFetch<{ liveClass: any }>(`/live/${id}`);
+    async getById(id: string, options: RequestInit = {}) {
+      return apiFetch<{ liveClass: any; data?: any }>(`/live/${id}`, options);
     },
-    async getPlaybackToken(id: string) {
-      return apiFetch<{ token: string; status: string; whepUrl: string; hlsUrl: string }>(
-        `/live/${id}/playback-token`
+    async getPlaybackToken(id: string, options: RequestInit = {}) {
+      return apiFetch<{ token: string; status: string; whepUrl: string; hlsUrl: string; roomName?: string }>(
+        `/live/${id}/playback-token`,
+        options
       );
     },
-    async start(id: string) {
-      return apiFetch(`/live/${id}/start`, { method: "POST" });
+    async start(id: string, options: RequestInit = {}) {
+      return apiFetch<{ success: boolean; liveClass: any; hlsUrl?: string; publishing?: any }>(
+        `/live/${id}/start`,
+        { ...options, method: "POST" }
+      );
     },
-    async end(id: string) {
-      return apiFetch(`/live/${id}/end`, { method: "POST" });
+    async end(id: string, options: RequestInit = {}) {
+      return apiFetch<{ success: boolean; liveClass: any; status: string }>(
+        `/live/${id}/end`,
+        { ...options, method: "POST" }
+      );
+    },
+    async heartbeat(id: string, options: RequestInit = {}) {
+      return apiFetch<{ ok: boolean; status: string }>(
+        `/live/${id}/heartbeat`,
+        { ...options, method: "POST" }
+      );
+    },
+    async create(body: any, options: RequestInit = {}) {
+      return apiFetch<{ liveClass: any }>(`/live`, {
+        ...options,
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+    async instant(body: any, options: RequestInit = {}) {
+      return apiFetch<{ liveClass: any }>(`/live/instant`, {
+        ...options,
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+    async getRecording(id: string, options: RequestInit = {}) {
+      return apiFetch<{ available: boolean; recordingUrl: string | null; fileSizeMb: number | null; title: string }>(
+        `/live/${id}/recording`,
+        options
+      );
     },
   },
 

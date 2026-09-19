@@ -65,14 +65,14 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error("ICE gathering timeout")), 5000);
+        // Wait for ICE gathering to complete or timeout gracefully
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(() => resolve(), 3500);
           pc.onicecandidate = (e) => {
-            if (!e.candidate) { clearTimeout(timeout); resolve(); }
-          };
-          pc.onicecandidateerror = () => {
-            clearTimeout(timeout);
-            reject(new Error("ICE candidate error"));
+            if (!e.candidate) {
+              clearTimeout(timer);
+              resolve();
+            }
           };
         });
 

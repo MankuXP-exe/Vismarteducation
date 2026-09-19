@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 import { notifyBatchStudents } from "@/lib/notifications";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 function abbreviationFromName(name: string) {
   const letters = name
@@ -34,6 +37,38 @@ async function ensureSubject(batchId: string, subjectName: string | null) {
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    if (!body.batchId) {
+      return NextResponse.json({ error: "batchId is required" }, { status: 400 });
+    }
+
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const headers = { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` };
+          const { data, error } = await api.live.instant(
+            {
+              batchId: body.batchId,
+              subjectId: body.subjectId,
+              subjectName: body.subjectName,
+              title: body.title || "Instant Live Class",
+              description: body.description || "",
+              durationMinutes: body.durationMinutes || 60,
+            },
+            { headers }
+          );
+
+          if (!error && data?.liveClass) {
+            return NextResponse.json({ liveClass: data.liveClass });
+          }
+        }
+      } catch {
+        // Fallback to Supabase
+      }
+    }
+
     const supabase = await createRouteClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,11 +81,6 @@ export async function POST(req: Request) {
 
     if (!hasTeacherAccess(user, profile)) {
       return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    if (!body.batchId) {
-      return NextResponse.json({ error: "batchId is required" }, { status: 400 });
     }
 
     const subjectId = await ensureSubject(body.batchId, body.subjectName || null);

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 async function ensureChapterRecord(batchId: string, subjectId: string, title?: string) {
   const { data: maxChapter } = await supabaseAdmin
@@ -28,6 +31,26 @@ async function ensureChapterRecord(batchId: string, subjectId: string, title?: s
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    const classId = body.classId || body.id;
+    if (!classId) return NextResponse.json({ error: "classId is required" }, { status: 400 });
+
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const headers = { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` };
+          const { data, error } = await api.live.end(classId, { headers });
+          if (!error && data) {
+            return NextResponse.json({ success: true, liveClass: data.liveClass, status: data.status });
+          }
+        }
+      } catch {
+        // Fallback to Supabase
+      }
+    }
+
     const supabase = await createRouteClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,9 +65,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
     }
 
-    const { classId } = await req.json();
-    if (!classId) return NextResponse.json({ error: "classId is required" }, { status: 400 });
-
     const { data: liveClass } = await supabaseAdmin
       .from("live_classes")
       .select("id, hms_room_id, status, batch_id, subject_id, chapter_id, title, description, teacher_id, recording_url")
@@ -53,7 +73,7 @@ export async function POST(req: Request) {
 
     if (!liveClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
-    // If already completed/cancelled by webhook, return success (idempotent)
+    // If already completed/cancelled, return success (idempotent)
     if (liveClass.status === "completed" || liveClass.status === "cancelled") {
       return NextResponse.json({ success: true, status: liveClass.status });
     }

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Mic, MicOff, Camera, CameraOff, MonitorUp, RotateCw,
-  PhoneOff, Loader2, Square, Maximize2, Minus,
+  PhoneOff, Loader2, Square, Maximize2, Minus, AlertCircle,
 } from "lucide-react";
 
 const WHIP_BASE = "https://live.vismartlearningeducation.com";
@@ -16,8 +16,8 @@ const ICE_SERVERS = [
 ];
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
-const MAX_BITRATE = 1_500_000;
-const PIP_SIZES = { small: 200, medium: 280, large: 360 } as const;
+const MAX_BITRATE = 2_000_000;
+const PIP_SIZES = { small: 220, medium: 300, large: 380 } as const;
 type PipSize = keyof typeof PIP_SIZES;
 type Mode = "camera" | "screen" | "pip";
 
@@ -54,23 +54,34 @@ function drawAspectCover(ctx: CanvasRenderingContext2D, video: HTMLVideoElement,
   ctx.drawImage(video, sx, sy, sw, sh);
 }
 
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
 // ─── Controls component ──────────────────────────────────────────
 
 type ControlsProps = {
   micOn: boolean; setMicOn: (v: boolean) => void;
   camOn: boolean; setCamOn: (v: boolean) => void;
-  screenOn: boolean; setScreenOn: (v: boolean) => void;
+  screenOn: boolean; onToggleScreen: () => void;
   mode: Mode; setMode: (v: Mode) => void;
   pipSize: PipSize; setPipSize: (v: PipSize) => void;
   onFlipCamera: () => void;
   onEnd: () => void;
   live: boolean;
+  duration: number;
 };
 
 function Controls({
   micOn, setMicOn, camOn, setCamOn,
-  screenOn, setScreenOn, mode, setMode,
-  pipSize, setPipSize, onFlipCamera, onEnd, live,
+  screenOn, onToggleScreen, mode, setMode,
+  pipSize, setPipSize, onFlipCamera, onEnd, live, duration,
 }: ControlsProps) {
   const btnClass = "flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full backdrop-blur-md border border-white/10 transition-all active:scale-95";
 
@@ -78,55 +89,82 @@ function Controls({
     <div className="flex flex-col items-center gap-2 px-3 py-3 md:py-4">
       {/* Mode row */}
       <div className="flex items-center gap-1.5">
-        <button onClick={() => setMode("camera")}
-          className={`rounded-lg px-3 py-1 text-[11px] font-medium transition-all ${mode === "camera" ? "bg-purple-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}>
-          Camera
+        <button
+          onClick={() => setMode("camera")}
+          className={`rounded-lg px-3 py-1 text-[11px] font-medium transition-all ${
+            mode === "camera" ? "bg-purple-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"
+          }`}
+        >
+          Camera Full
         </button>
-        <button onClick={() => { if (screenOn) setMode("screen"); }}
-          className={`rounded-lg px-3 py-1 text-[11px] font-medium transition-all ${!screenOn ? "opacity-40 cursor-not-allowed" : ""} ${mode === "screen" ? "bg-purple-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}>
-          Screen
+        <button
+          onClick={() => { if (screenOn) setMode("screen"); }}
+          disabled={!screenOn}
+          className={`rounded-lg px-3 py-1 text-[11px] font-medium transition-all ${
+            !screenOn ? "opacity-40 cursor-not-allowed" : ""
+          } ${mode === "screen" ? "bg-purple-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
+        >
+          Screen Full
         </button>
-        <button onClick={() => { if (screenOn) setMode("pip"); }}
-          className={`rounded-lg px-3 py-1 text-[11px] font-medium transition-all ${!screenOn ? "opacity-40 cursor-not-allowed" : ""} ${mode === "pip" ? "bg-purple-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}>
-          Screen+Cam
+        <button
+          onClick={() => { if (screenOn) setMode("pip"); }}
+          disabled={!screenOn}
+          className={`rounded-lg px-3 py-1 text-[11px] font-medium transition-all ${
+            !screenOn ? "opacity-40 cursor-not-allowed" : ""
+          } ${mode === "pip" ? "bg-purple-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
+        >
+          Screen + Cam (PiP)
         </button>
       </div>
 
       {/* Main controls row */}
       <div className="flex items-center justify-center gap-2 md:gap-3">
-        <button onClick={() => setMicOn(!micOn)}
+        <button
+          onClick={() => setMicOn(!micOn)}
           className={`${btnClass} ${micOn ? "bg-white/20 text-white hover:bg-white/30" : "bg-red-500/80 text-white"}`}
-          title={micOn ? "Mute" : "Unmute"}>
+          title={micOn ? "Mute Microphone" : "Unmute Microphone"}
+        >
           {micOn ? <Mic className="h-4 w-4 md:h-5 md:w-5" /> : <MicOff className="h-4 w-4 md:h-5 md:w-5" />}
         </button>
 
-        <button onClick={() => setCamOn(!camOn)}
+        <button
+          onClick={() => setCamOn(!camOn)}
           className={`${btnClass} ${camOn ? "bg-white/20 text-white hover:bg-white/30" : "bg-red-500/80 text-white"}`}
-          title={camOn ? "Camera off" : "Camera on"}>
+          title={camOn ? "Turn Camera Off" : "Turn Camera On"}
+        >
           {camOn ? <Camera className="h-4 w-4 md:h-5 md:w-5" /> : <CameraOff className="h-4 w-4 md:h-5 md:w-5" />}
         </button>
 
-        <button onClick={onFlipCamera}
+        <button
+          onClick={onFlipCamera}
           className={`${btnClass} bg-white/20 text-white hover:bg-white/30`}
-          title="Flip camera">
+          title="Flip camera"
+        >
           <RotateCw className="h-4 w-4 md:h-5 md:w-5" />
         </button>
 
-        <button onClick={() => setScreenOn(!screenOn)}
-          className={`${btnClass} ${screenOn ? "bg-emerald-500/80 text-white" : "bg-white/20 text-white hover:bg-white/30"}`}
-          title={screenOn ? "Stop sharing" : "Share screen"}>
+        <button
+          onClick={onToggleScreen}
+          className={`${btnClass} ${screenOn ? "bg-emerald-500/90 text-white ring-2 ring-emerald-400" : "bg-white/20 text-white hover:bg-white/30"}`}
+          title={screenOn ? "Stop sharing screen" : "Share screen"}
+        >
           <MonitorUp className="h-4 w-4 md:h-5 md:w-5" />
         </button>
 
-        {/* PIP size controls (only visible in pip mode) */}
+        {/* PIP size controls */}
         {mode === "pip" && screenOn && (
           <div className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">
             {(["small", "medium", "large"] as PipSize[]).map((s) => {
               const Icon = s === "small" ? Minus : s === "medium" ? Square : Maximize2;
               return (
-                <button key={s} onClick={() => setPipSize(s)}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold transition-all ${pipSize === s ? "bg-purple-600 text-white" : "text-white/50 hover:text-white"}`}
-                  title={`${s} PIP`}>
+                <button
+                  key={s}
+                  onClick={() => setPipSize(s)}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold transition-all ${
+                    pipSize === s ? "bg-purple-600 text-white" : "text-white/50 hover:text-white"
+                  }`}
+                  title={`${s} PiP`}
+                >
                   <Icon className="h-3 w-3" />
                 </button>
               );
@@ -136,16 +174,20 @@ function Controls({
 
         <div className="mx-1 h-8 w-px bg-white/10 md:mx-2" />
 
-        <button onClick={onEnd}
+        <button
+          onClick={onEnd}
           className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-red-500/30 hover:bg-red-700 active:scale-95 transition-all"
-          title="End class">
+          title="End Live Class"
+        >
           <PhoneOff className="h-4 w-4 md:h-5 md:w-5" />
         </button>
 
         {live && (
-          <span className="flex items-center gap-1.5 rounded-md bg-red-600/90 px-2 py-1 text-[10px] font-bold text-white uppercase tracking-wider md:text-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> LIVE
-          </span>
+          <div className="flex items-center gap-2 rounded-lg bg-red-600/90 px-2.5 py-1 text-[11px] font-bold text-white shadow">
+            <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+            <span>LIVE</span>
+            <span className="font-mono text-white/90 text-[10px]">{formatDuration(duration)}</span>
+          </div>
         )}
       </div>
     </div>
@@ -170,8 +212,8 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
   const audioSenderRef = useRef<RTCRtpSender | null>(null);
-  const screenAudioSenderRef = useRef<RTCRtpSender | null>(null);
   const animFrameRef = useRef<number>(0);
+  const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
@@ -179,22 +221,56 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   const [live, setLive] = useState(false);
   const [connecting, setConnecting] = useState(true);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const [mode, setMode] = useState<Mode>("camera");
   const [pipSize, setPipSize] = useState<PipSize>("medium");
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
-  // ─── Compositor loop ──────────────────────────────────────────────
-  // Always paint every rAF frame to keep canvas.captureStream(30) alive.
-  // captureStream samples at 30fps internally, so painting at 60fps is fine.
+  const [duration, setDuration] = useState(0);
+
+  // ─── Live Duration Timer ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!live) return;
+    const interval = setInterval(() => {
+      setDuration((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [live]);
+
+  // ─── Stream Heartbeat ────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!live) return;
+    heartbeatTimer.current = setInterval(async () => {
+      try {
+        await fetch("/api/live/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ classId }),
+        });
+      } catch {
+        // Non-blocking
+      }
+    }, 15000);
+    return () => {
+      if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
+    };
+  }, [live, classId]);
+
+  // ─── Compositor Loop (Always Broadcasts to Students and Teacher) ──
 
   const drawFrameRef = useRef<() => void>(() => {});
 
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) { animFrameRef.current = requestAnimationFrame(drawFrameRef.current); return; }
+    if (!canvas || !ctx) {
+      animFrameRef.current = requestAnimationFrame(drawFrameRef.current);
+      return;
+    }
 
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-    ctx.fillStyle = "#111";
+    ctx.fillStyle = "#0c0a09"; // Dark background
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     const isSelfFacing = facingMode === "user";
@@ -203,12 +279,14 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
     const hasScreen = screenOn && scrReady !== undefined && scrReady >= 2;
     const hasCamera = camOn && camReady !== undefined && camReady >= 2;
 
-    if (hasScreen && mode !== "camera") {
-      drawAspectFill(ctx, screenVideoRef.current!, 0, 0, CANVAS_W, CANVAS_H);
+    if (hasScreen && (mode === "screen" || mode === "pip" || !hasCamera)) {
+      // Draw screen as the primary view (aspect-fit to maintain code/slide legibility)
+      drawAspectCover(ctx, screenVideoRef.current!, 0, 0, CANVAS_W, CANVAS_H);
     }
 
     if (hasCamera) {
       if (!hasScreen || mode === "camera") {
+        // Camera Full
         ctx.save();
         if (isSelfFacing) {
           ctx.translate(CANVAS_W, 0);
@@ -216,240 +294,117 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
         }
         drawAspectFill(ctx, cameraVideoRef.current!, 0, 0, CANVAS_W, CANVAS_H);
         ctx.restore();
-      } else if (mode === "pip") {
+      } else if (mode === "pip" && hasScreen) {
+        // Camera PiP Overlay on top of Screen Share
         const pipW = PIP_SIZES[pipSize];
-        const pipAspect = 16 / 9;
-        const pipH = Math.round(pipW / pipAspect);
-        const pipX = CANVAS_W - pipW - 20;
-        const pipY = CANVAS_H - pipH - 20;
+        const pipH = Math.round((pipW * 9) / 16);
+        const pipX = CANVAS_W - pipW - 24;
+        const pipY = CANVAS_H - pipH - 24;
 
         ctx.save();
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 20;
+        // Drop shadow for PiP window
+        ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
         ctx.beginPath();
-        roundRect(ctx, pipX - 2, pipY - 2, pipW + 4, pipH + 4, 12);
-        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        roundRect(ctx, pipX, pipY, pipW, pipH, 12);
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
         ctx.fill();
         ctx.restore();
 
+        // Clip and draw camera video in PiP
         ctx.save();
         ctx.beginPath();
-        roundRect(ctx, pipX, pipY, pipW, pipH, 10);
+        roundRect(ctx, pipX, pipY, pipW, pipH, 12);
         ctx.clip();
 
         if (isSelfFacing) {
           ctx.save();
           ctx.translate(CANVAS_W, 0);
           ctx.scale(-1, 1);
-          drawAspectCover(ctx, cameraVideoRef.current!, CANVAS_W - pipX - pipW, pipY, pipW, pipH);
+          drawAspectFill(ctx, cameraVideoRef.current!, CANVAS_W - pipX - pipW, pipY, pipW, pipH);
           ctx.restore();
         } else {
-          drawAspectCover(ctx, cameraVideoRef.current!, pipX, pipY, pipW, pipH);
+          drawAspectFill(ctx, cameraVideoRef.current!, pipX, pipY, pipW, pipH);
         }
 
-        ctx.strokeStyle = "#7c3aed";
+        // Distinct border around PiP
+        ctx.strokeStyle = "#8b5cf6"; // Purple accent
         ctx.lineWidth = 3;
         ctx.beginPath();
-        roundRect(ctx, pipX, pipY, pipW, pipH, 10);
+        roundRect(ctx, pipX, pipY, pipW, pipH, 12);
         ctx.stroke();
         ctx.restore();
       }
     }
 
-    // Camera-off placeholder when camera expected but disabled
-    if (!hasCamera && camOn === false && (mode === "camera" || (hasScreen && mode === "pip"))) {
-      ctx.fillStyle = "rgba(30, 30, 40, 0.85)";
+    // Audio-only fallback banner if both camera and screen are disabled
+    if (!hasScreen && !hasCamera) {
+      ctx.fillStyle = "#18181b";
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      ctx.fillStyle = "#555";
-      ctx.font = "48px sans-serif";
+
+      ctx.fillStyle = "#a855f7";
+      ctx.beginPath();
+      ctx.arc(CANVAS_W / 2, CANVAS_H / 2 - 20, 48, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 32px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("📷", CANVAS_W / 2, CANVAS_H / 2 - 12);
+      ctx.fillText("🎙️", CANVAS_W / 2, CANVAS_H / 2 - 20);
+
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = "#f4f4f5";
+      ctx.fillText("Vi Smart Live - Audio Broadcasting", CANVAS_W / 2, CANVAS_H / 2 + 50);
+
       ctx.font = "14px sans-serif";
-      ctx.fillStyle = "#777";
-      ctx.fillText("Camera Off", CANVAS_W / 2, CANVAS_H / 2 + 32);
+      ctx.fillStyle = "#a1a1aa";
+      ctx.fillText("Microphone is active. Enable camera or screen share to broadcast video.", CANVAS_W / 2, CANVAS_H / 2 + 80);
     }
 
     animFrameRef.current = requestAnimationFrame(drawFrameRef.current);
   }, [camOn, screenOn, mode, pipSize, facingMode]);
 
-  // Keep ref in sync so rAF always calls latest
   drawFrameRef.current = drawFrame;
 
-  // Continuous rAF loop — never restarts, so captureStream never gaps
   useEffect(() => {
-    const loop = () => {
-      drawFrameRef.current();
-      animFrameRef.current = requestAnimationFrame(loop);
-    };
-    animFrameRef.current = requestAnimationFrame(loop);
+    animFrameRef.current = requestAnimationFrame(drawFrameRef.current);
     return () => cancelAnimationFrame(animFrameRef.current);
   }, []);
 
-  // ─── Audio track management ──────────────────────────────────────
-
-  // Mic audio sender (always present)
-  const switchAudioTrack = useCallback(async (newTrack: MediaStreamTrack | null) => {
-    const sender = audioSenderRef.current;
-    if (!sender) {
-      if (newTrack && pcRef.current) {
-        const s = pcRef.current.addTrack(newTrack, new MediaStream([newTrack]));
-        audioSenderRef.current = s;
-      }
-      return;
-    }
-    if (newTrack) {
-      try { await sender.replaceTrack(newTrack); } catch { /* ignore */ }
-    } else {
-      try { await sender.replaceTrack(null); } catch { /* ignore */ }
-    }
-  }, []);
-
-  // Screen audio sender (added when screenshare has audio, removed when screen stops)
-  const setupScreenAudio = useCallback(async (screenAudioTrack: MediaStreamTrack | null) => {
-    const oldSender = screenAudioSenderRef.current;
-    if (oldSender) {
-      try {
-        const pc = pcRef.current;
-        if (pc) pc.removeTrack(oldSender);
-      } catch { /* ignore */ }
-      screenAudioSenderRef.current = null;
-    }
-    if (screenAudioTrack && pcRef.current) {
-      try {
-        const sender = pcRef.current.addTrack(screenAudioTrack, new MediaStream([screenAudioTrack]));
-        screenAudioSenderRef.current = sender;
-      } catch { /* ignore */ }
-    }
-  }, []);
-
-  // ─── Mic toggle ──────────────────────────────────────────────────
+  // ─── Mic Toggle ──────────────────────────────────────────────────
 
   useEffect(() => {
-    cameraStreamRef.current?.getAudioTracks().forEach((t) => t.enabled = micOn);
+    cameraStreamRef.current?.getAudioTracks().forEach((t) => {
+      t.enabled = micOn;
+    });
   }, [micOn]);
 
-  // ─── Camera toggle ───────────────────────────────────────────────
-
-  useEffect(() => {
-    cameraStreamRef.current
-      ?.getVideoTracks()
-      .forEach(track => {
-        track.enabled = camOn
-      })
-  }, [camOn])
+  // ─── Camera Setup ────────────────────────────────────────────────
 
   const setupCamera = useCallback(async (facing: "user" | "environment") => {
-    // Stop previous camera
-    cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
-    cameraStreamRef.current = null;
-
     try {
+      cameraStreamRef.current?.getVideoTracks().forEach((t) => t.stop());
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: facing },
-        audio: true,
+        audio: false,
       });
-      cameraStreamRef.current = stream;
-
-      // Feed hidden camera video element for compositor
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack && cameraStreamRef.current) {
+        cameraStreamRef.current.removeTrack(cameraStreamRef.current.getVideoTracks()[0]);
+        cameraStreamRef.current.addTrack(videoTrack);
+      }
       if (cameraVideoRef.current) {
         cameraVideoRef.current.srcObject = stream;
         cameraVideoRef.current.play().catch(() => {});
       }
-
-      // Set mic audio sender
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = micOn;
-        await switchAudioTrack(audioTrack);
-      }
-    } catch (err: any) {
-      if (err.name !== "NotAllowedError" && err.name !== "NotFoundError") {
-        console.error("Camera error:", err.message);
-      }
-    }
-  }, [micOn, switchAudioTrack]);
-
-  // ─── Screenshare toggle ──────────────────────────────────────────
-
-  const toggleScreen = useCallback(async (enabled: boolean) => {
-    const pc = pcRef.current;
-    if (!enabled) {
-      await setupScreenAudio(null);
-      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-      screenStreamRef.current = null;
-      if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
-
-      // Swap back to camera track directly
-      if (pc && cameraStreamRef.current) {
-        const camTrack = cameraStreamRef.current.getVideoTracks()[0];
-        const sender = pc.getSenders().find(s => s.track?.kind === "video");
-        if (sender && camTrack) {
-          await sender.replaceTrack(camTrack);
-        }
-      }
-
-      setScreenOn(false);
-      setMode((prev) => prev === "screen" || prev === "pip" ? "camera" : prev);
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
-      });
-      screenStreamRef.current = stream;
-
-      stream.getVideoTracks()[0].onended = () => {
-        toggleScreen(false);
-      };
-
-      if (screenVideoRef.current) {
-        screenVideoRef.current.srcObject = stream;
-        screenVideoRef.current.play().catch(() => {});
-      }
-
-      // When screen share starts, swap to canvas compositor
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext("2d");
-      if (canvas && ctx) {
-        const drawScreen = () => {
-          if (!screenVideoRef.current || !screenOn && !stream.active) return;
-          ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-          ctx.fillStyle = "#111";
-          ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-          if (mode === "screen" || mode === "pip") {
-            drawAspectFill(ctx, screenVideoRef.current, 0, 0, CANVAS_W, CANVAS_H);
-          }
-          requestAnimationFrame(drawScreen);
-        };
-        drawScreen();
-      }
-
-      const screenAudio = stream.getAudioTracks()[0];
-      if (screenAudio) {
-        await setupScreenAudio(screenAudio);
-      }
-
-      // Swap video track to canvas stream for screen/pip mode
-      if (pc) {
-        const canvasStream = canvasRef.current!.captureStream(30);
-        const canvasVideoTrack = canvasStream.getVideoTracks()[0];
-        const sender = pc.getSenders().find(s => s.track?.kind === "video");
-        if (sender && canvasVideoTrack) {
-          await sender.replaceTrack(canvasVideoTrack);
-        }
-      }
-
-      setScreenOn(true);
-      setMode((prev) => prev === "screen" ? "screen" : "pip");
+      setCamOn(true);
     } catch {
-      setScreenOn(false);
+      setWarning("Could not switch camera.");
     }
-  }, [setupScreenAudio, screenOn, mode]);
-
-  // ─── Flip camera ─────────────────────────────────────────────────
+  }, []);
 
   const handleFlipCamera = useCallback(async () => {
     const next = facingMode === "user" ? "environment" : "user";
@@ -457,35 +412,112 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
     await setupCamera(next);
   }, [facingMode, setupCamera]);
 
-  // ─── Initial setup ───────────────────────────────────────────────
+  // ─── Screen Share Toggle ─────────────────────────────────────────
+
+  const toggleScreen = useCallback(async () => {
+    if (screenOn) {
+      // Stop screen share
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+      if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+      setScreenOn(false);
+      setMode("camera");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: true,
+      });
+
+      screenStreamRef.current = stream;
+
+      // Handle browser's native "Stop sharing" button cleanly
+      stream.getVideoTracks()[0].onended = () => {
+        screenStreamRef.current = null;
+        if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+        setScreenOn(false);
+        setMode("camera");
+      };
+
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = stream;
+        screenVideoRef.current.play().catch(() => {});
+      }
+
+      setScreenOn(true);
+      // Automatically switch to PiP mode so camera + screen share show together!
+      setMode("pip");
+    } catch (err: any) {
+      // User cancelled picker or permission denied — non-fatal
+      if (err.name !== "NotAllowedError") {
+        console.warn("Screen share error:", err);
+      }
+      setScreenOn(false);
+    }
+  }, [screenOn]);
+
+  // ─── WebRTC Publishing Initialization ────────────────────────────
 
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
       try {
-        // 1. Get camera — use lower resolution for less encoding overhead
-        const camStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-          audio: true,
-        });
-        if (cancelled) { camStream.getTracks().forEach((t) => t.stop()); return; }
-        cameraStreamRef.current = camStream;
-
-        if (cameraVideoRef.current) {
-          cameraVideoRef.current.srcObject = camStream;
-          cameraVideoRef.current.play().catch(() => {});
-        }
-
-        // 2. Create canvas and capture stream
+        // 1. Initialize canvas and compositor stream FIRST
         const canvas = canvasRef.current!;
         canvas.width = CANVAS_W;
         canvas.height = CANVAS_H;
         const canvasStream = canvas.captureStream(30);
-        const audioTrack = camStream.getAudioTracks()[0];
-        if (audioTrack) audioTrack.enabled = micOn;
+        const canvasVideoTrack = canvasStream.getVideoTracks()[0];
 
-        // 3. Create peer connection with optimized settings
+        // The teacher preview mirrors the canvas stream so teacher sees what students see!
+        if (videoRef.current) {
+          videoRef.current.srcObject = canvasStream;
+          videoRef.current.play().catch(() => {});
+        }
+
+        // 2. Obtain Camera + Microphone
+        let userAudioTrack: MediaStreamTrack | null = null;
+        try {
+          const camStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+            audio: true,
+          });
+
+          if (cancelled) {
+            camStream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+
+          cameraStreamRef.current = camStream;
+          if (cameraVideoRef.current) {
+            cameraVideoRef.current.srcObject = camStream;
+            cameraVideoRef.current.play().catch(() => {});
+          }
+
+          userAudioTrack = camStream.getAudioTracks()[0] || null;
+          if (userAudioTrack) userAudioTrack.enabled = micOn;
+        } catch (mediaErr: any) {
+          // If camera denied, try microphone only
+          try {
+            const micOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (cancelled) {
+              micOnlyStream.getTracks().forEach((t) => t.stop());
+              return;
+            }
+            cameraStreamRef.current = micOnlyStream;
+            userAudioTrack = micOnlyStream.getAudioTracks()[0] || null;
+            if (userAudioTrack) userAudioTrack.enabled = micOn;
+            setCamOn(false);
+            setWarning("Camera permission denied. Broadcasting audio and screen share.");
+          } catch {
+            setWarning("Microphone and camera permissions denied.");
+          }
+        }
+
+        // 3. Create WebRTC PeerConnection for MediaMTX WHIP
         const pc = new RTCPeerConnection({
           iceServers: ICE_SERVERS,
           iceTransportPolicy: "all",
@@ -494,15 +526,17 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
         });
         pcRef.current = pc;
 
-        // 4. Add VIDEO — use camera directly in camera mode (skip canvas), canvas for screen modes
-        const camVideoTrack = camStream.getVideoTracks()[0];
-        pc.addTrack(camVideoTrack, camStream);
-        if (audioTrack) {
-          const sender = pc.addTrack(audioTrack, new MediaStream([audioTrack]));
+        // 4. Add the CONSTANT canvas video track to WebRTC
+        // This ensures the outgoing stream NEVER resets or renegotiates on layout switches!
+        pc.addTrack(canvasVideoTrack, canvasStream);
+
+        // 5. Add audio track
+        if (userAudioTrack) {
+          const sender = pc.addTrack(userAudioTrack, new MediaStream([userAudioTrack]));
           audioSenderRef.current = sender;
         }
 
-        // 5. Force H.264 for video transceiver
+        // 6. Force H.264 video codec preference for broad compatibility
         const [videoTransceiver] = pc.getTransceivers().filter((t) => t.receiver.track.kind === "video");
         if (videoTransceiver && typeof RTCRtpReceiver.getCapabilities === "function") {
           const caps = RTCRtpReceiver.getCapabilities("video");
@@ -514,15 +548,14 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
           }
         }
 
-        // 6. Connection state
+        // 7. Track ICE Connection State
         pc.oniceconnectionstatechange = () => {
           if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
             setLive(true);
             setConnecting(false);
 
-            // Cap video bitrate — lower for stability
             try {
-              const sender = pc.getSenders().find(s => s.track?.kind === "video");
+              const sender = pc.getSenders().find((s) => s.track?.kind === "video");
               if (sender) {
                 const params = sender.getParameters();
                 if (!params.encodings) params.encodings = [{}];
@@ -531,13 +564,15 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
                 params.encodings[0].networkPriority = "high";
                 sender.setParameters(params).catch(() => {});
               }
-            } catch { /* non-critical */ }
+            } catch {
+              // Ignore bitrate parameter errors
+            }
           } else if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
             setLive(false);
           }
         };
 
-        // 7. WHIP — send offer once ICE gathering completes (with timeout fallback)
+        // 8. Send WHIP Offer once ICE gathering completes
         let whipSent = false;
         const sendWhip = async () => {
           if (whipSent) return;
@@ -563,7 +598,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
 
             let answer = await res.text();
 
-            // Sanitize SDP for Android WebView (Capacitor) which rejects a=recvonly at session level
+            // Sanitize SDP for Android WebView / strict SDP parsers
             const lines = answer.split("\n");
             let seenMedia = false;
             const sanitized = lines.filter((l) => {
@@ -576,14 +611,8 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
             }
 
             await pc.setRemoteDescription({ type: "answer", sdp: answer });
-
-            // Preview the camera stream
-            if (videoRef.current) {
-              videoRef.current.srcObject = camStream;
-              videoRef.current.play().catch(() => {});
-            }
           } catch (err: any) {
-            setError(err.message);
+            setError(err.message || "Failed to establish live stream connection.");
             setConnecting(false);
           }
         };
@@ -592,15 +621,15 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
           if (!e.candidate) sendWhip();
         };
 
-        // Fallback: if ICE gathering doesn't complete in 4s, send anyway
-        setTimeout(() => { if (!whipSent) sendWhip(); }, 4000);
+        setTimeout(() => {
+          if (!whipSent) sendWhip();
+        }, 3500);
 
-        // 8. Create offer
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
       } catch (err: any) {
         if (!cancelled) {
-          setError(err.message);
+          setError(err.message || "Could not initialize broadcast.");
           setConnecting(false);
         }
       }
@@ -611,6 +640,7 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
     return () => {
       cancelled = true;
       cancelAnimationFrame(animFrameRef.current);
+      if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
       pcRef.current?.close();
       pcRef.current = null;
       cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -618,12 +648,13 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
       cameraStreamRef.current = null;
       screenStreamRef.current = null;
     };
-  }, [classId, roomName, micOn]);
+  }, [classId, roomName]);
 
-  // ─── End stream ──────────────────────────────────────────────────
+  // ─── End Stream Handler ──────────────────────────────────────────
 
   const handleEnd = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
+    if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
     pcRef.current?.close();
     pcRef.current = null;
     cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -642,10 +673,12 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-800">
             <CameraOff className="h-8 w-8 text-red-400" />
           </div>
-          <p className="mb-1 text-lg font-bold text-white">Failed to Start Stream</p>
+          <p className="mb-1 text-lg font-bold text-white">Broadcast Failed</p>
           <p className="mb-6 text-sm text-gray-400">{error}</p>
-          <button onClick={() => router.back()}
-            className="rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-700">
+          <button
+            onClick={() => router.back()}
+            className="rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
+          >
             Go Back
           </button>
         </div>
@@ -654,48 +687,73 @@ export default function TeacherLiveStreamer({ classId, roomName, onEnd }: Props)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gray-950">
-      {/* Compositor preview (what teacher sees = what students get) */}
-      <div className="relative flex-1 overflow-hidden">
-        <video ref={videoRef} autoPlay muted playsInline
-          className="h-full w-full object-contain" />
+    <div className="fixed inset-0 z-50 flex flex-col bg-gray-950 select-none">
+      {/* Compositor preview (What teacher sees == What students receive!) */}
+      <div className="relative flex-1 overflow-hidden bg-black flex items-center justify-center">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="h-full w-full object-contain"
+        />
 
         {connecting && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-950/80 backdrop-blur-sm">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-950/80 backdrop-blur-sm z-20">
             <div className="text-center">
               <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-purple-500" />
-              <p className="text-sm font-medium text-white/80">Connecting to stream server...</p>
+              <p className="text-sm font-medium text-white/90">Connecting to live streaming server...</p>
+              <p className="text-xs text-white/50 mt-1">Establishing low-latency WebRTC broadcast</p>
             </div>
           </div>
         )}
 
-        <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2">
+        {/* Live Status Overlay */}
+        <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2">
           {live && (
-            <span className="flex items-center gap-1.5 rounded-md bg-red-600/90 px-2 py-1 text-[10px] font-bold text-white uppercase tracking-wider md:text-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> LIVE
-            </span>
+            <div className="flex items-center gap-2 rounded-md bg-red-600 px-2.5 py-1 text-xs font-bold text-white uppercase tracking-wider shadow-lg">
+              <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+              <span>LIVE</span>
+              <span className="font-mono text-white/90">{formatDuration(duration)}</span>
+            </div>
+          )}
+          {screenOn && (
+            <div className="flex items-center gap-1.5 rounded-md bg-purple-600/90 backdrop-blur-md px-2.5 py-1 text-xs font-semibold text-white shadow">
+              <MonitorUp className="h-3.5 w-3.5" />
+              <span>Screen Sharing ({mode === "pip" ? "PiP Active" : "Full"})</span>
+            </div>
           )}
         </div>
+
+        {/* Non-fatal warning banner */}
+        {warning && (
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-lg bg-amber-500/90 text-black px-3 py-1.5 text-xs font-medium shadow-lg">
+            <AlertCircle className="h-4 w-4" />
+            <span>{warning}</span>
+            <button onClick={() => setWarning("")} className="ml-2 font-bold hover:text-black/70">✕</button>
+          </div>
+        )}
       </div>
 
-      {/* Controls */}
-      <div className="bg-gradient-to-t from-gray-950 via-gray-950/95 to-transparent">
+      {/* Control Bar */}
+      <div className="bg-gradient-to-t from-gray-950 via-gray-950/95 to-transparent border-t border-white/5">
         <Controls
           micOn={micOn} setMicOn={setMicOn}
           camOn={camOn} setCamOn={setCamOn}
-          screenOn={screenOn} setScreenOn={toggleScreen}
+          screenOn={screenOn} onToggleScreen={toggleScreen}
           mode={mode} setMode={setMode}
           pipSize={pipSize} setPipSize={setPipSize}
           onFlipCamera={handleFlipCamera}
           onEnd={handleEnd}
           live={live}
+          duration={duration}
         />
       </div>
 
-      {/* Hidden canvas compositor */}
+      {/* Hidden 1280x720 Canvas Compositor */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Hidden video elements feeding the compositor (opacity-0 keeps decoder active, reasonable size prevents decode throttling) */}
+      {/* Hidden Video Elements Feeding the Compositor */}
       <video ref={cameraVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "1280px", height: "720px" }} muted playsInline />
       <video ref={screenVideoRef} className="opacity-0 absolute pointer-events-none" style={{ width: "1280px", height: "720px" }} muted playsInline />
     </div>

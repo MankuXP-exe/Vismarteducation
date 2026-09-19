@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
 import { notifyBatchStudents } from "@/lib/notifications";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 function abbreviationFromName(name: string) {
   return name
@@ -75,6 +78,40 @@ async function ensureChapter(batchId: string, subjectId: string | null, chapterI
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    if (!body.batchId || !body.title || !body.scheduledAt) {
+      return NextResponse.json({ error: "Batch, title, and schedule time are required" }, { status: 400 });
+    }
+
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const headers = { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` };
+          const { data, error } = await api.live.create(
+            {
+              batch_id: body.batchId,
+              subject_id: body.subjectId,
+              chapter_id: body.chapterId,
+              title: body.title,
+              description: body.description,
+              scheduled_at: body.scheduledAt,
+              duration_minutes: body.durationMinutes || 60,
+              room_name: body.roomName,
+            },
+            { headers }
+          );
+
+          if (!error && data?.liveClass) {
+            return NextResponse.json({ liveClass: data.liveClass });
+          }
+        }
+      } catch {
+        // Fallback to Supabase
+      }
+    }
+
     const supabase = await createRouteClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -87,11 +124,6 @@ export async function POST(req: Request) {
 
     if (!hasTeacherAccess(user, profile)) {
       return NextResponse.json({ error: "Teacher access required" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    if (!body.batchId || !body.title || !body.scheduledAt) {
-      return NextResponse.json({ error: "Batch, title, and schedule time are required" }, { status: 400 });
     }
 
     const subjectId = await ensureSubject(body.batchId, body.subjectId, body.subjectName);
