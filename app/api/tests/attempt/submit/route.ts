@@ -1,15 +1,50 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    const { attemptId, answers, timeTakenSeconds } = body;
+    if (!attemptId) return NextResponse.json({ error: "attemptId required" }, { status: 400 });
+
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const headers = { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` };
+          const { data, error } = await api.tests.submitAttempt(attemptId, {
+            answers: answers || {},
+            time_taken_seconds: timeTakenSeconds || 0,
+          }, { headers });
+          if (!error && data) {
+            // Normalize response for frontend compatibility
+            return NextResponse.json({
+              attempt: data.attempt,
+              result: {
+                score: data.score,
+                totalMarks: data.total_marks,
+                correct: data.attempt?.correct_count,
+                incorrect: data.attempt?.incorrect_count,
+                unanswered: data.attempt?.unanswered_count,
+                percentage: data.percentage,
+                passed: data.passed,
+              },
+            });
+          }
+        }
+      } catch {
+        // Fallback to Supabase
+      }
+    }
+
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { attemptId, answers, timeTakenSeconds } = await req.json();
-    if (!attemptId) return NextResponse.json({ error: "attemptId required" }, { status: 400 });
 
     // Get attempt + test + questions
     const { data: attempt } = await supabaseAdmin
@@ -33,7 +68,6 @@ export async function POST(req: Request) {
     let correct = 0;
     let incorrect = 0;
     let unanswered = 0;
-    const totalQuestions = questions?.length || 0;
     const negativeMarks = attempt.tests?.negative_marking || 0;
 
     for (const q of questions || []) {
@@ -48,7 +82,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const totalMarks = questions?.reduce((s, q) => s + (q.marks || 1), 0) || 0;
+    const totalMarks = questions?.reduce((s: number, q: any) => s + (q.marks || 1), 0) || 0;
     const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100 * 100) / 100 : 0;
     const passed = percentage >= (attempt.tests?.pass_percentage || 40);
 

@@ -1,16 +1,46 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isVpsApiEnabled } from "@/lib/api/config";
+import { api } from "@/lib/api/client";
 
 export async function GET(req: Request) {
   try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const { searchParams } = new URL(req.url);
     const attemptId = searchParams.get("attemptId");
     const testId = searchParams.get("testId");
+
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const headers = { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` };
+
+          if (attemptId) {
+            const { data, error } = await api.tests.getAttemptById(attemptId, { headers });
+            if (!error && data) {
+              // Build response matching Supabase format
+              const attempts = data.attempt ? [data.attempt] : [];
+              const questions = data.test?.test_questions || [];
+              return NextResponse.json({ attempts, questions });
+            }
+          } else if (testId) {
+            const { data, error } = await api.tests.getAttempts(testId, { headers });
+            if (!error && data?.attempts) {
+              return NextResponse.json({ attempts: data.attempts, questions: [] });
+            }
+          }
+        }
+      } catch {
+        // Fallback to Supabase
+      }
+    }
+
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     let query = supabaseAdmin
       .from("test_attempts")

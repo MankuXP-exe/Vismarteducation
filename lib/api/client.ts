@@ -175,24 +175,76 @@ export const api = {
 
   // ── Tests & Assessments
   tests: {
-    async list(batchId?: string) {
+    async list(batchId?: string, options: RequestInit = {}) {
       const q = batchId ? `?batchId=${batchId}` : "";
-      return apiFetch<{ tests: any[] }>(`/tests${q}`);
+      return apiFetch<{ tests: any[] }>(`/tests${q}`, options);
     },
-    async getById(id: string) {
-      return apiFetch<{ test: any; hasCompleted: boolean; lastAttempt?: any }>(`/tests/${id}`);
+    async getById(id: string, options: RequestInit = {}) {
+      return apiFetch<{ test: any; hasCompleted: boolean; lastAttempt?: any }>(`/tests/${id}`, options);
     },
-    async start(id: string) {
-      return apiFetch<{ attempt: any }>(`/tests/${id}/start`, { method: "POST" });
+    async start(id: string, options: RequestInit = {}) {
+      return apiFetch<{ attempt: any }>(`/tests/${id}/start`, { ...options, method: "POST" });
     },
-    async submit(id: string, body: { attempt_id: string; answers: Record<string, string>; time_taken_seconds: number }) {
-      return apiFetch(`/tests/${id}/submit`, { method: "POST", body: JSON.stringify(body) });
+    async submit(id: string, body: { attempt_id?: string; answers: Record<string, string>; time_taken_seconds: number }, options: RequestInit = {}) {
+      return apiFetch(`/tests/${id}/submit`, { ...options, method: "POST", body: JSON.stringify(body) });
     },
-    async getAttempts(id: string) {
-      return apiFetch<{ attempts: any[] }>(`/tests/${id}/attempts`);
+    async getAttempts(id: string, options: RequestInit = {}) {
+      return apiFetch<{ attempts: any[] }>(`/tests/${id}/attempts`, options);
     },
-    async getLeaderboard(id: string) {
-      return apiFetch<{ leaderboard: any[] }>(`/tests/${id}/leaderboard`);
+    async getLeaderboard(id: string, options: RequestInit = {}) {
+      return apiFetch<{ leaderboard: any[] }>(`/tests/${id}/leaderboard`, options);
+    },
+    // ── Feature 5 additions ──
+    async myAttempts(options: RequestInit = {}) {
+      return apiFetch<{ attempts: any[] }>("/tests/my-attempts", options);
+    },
+    async getAttemptById(attemptId: string, options: RequestInit = {}) {
+      return apiFetch<{ attempt: any; test: any; hasCompleted: boolean }>(`/tests/attempts/${attemptId}`, options);
+    },
+    async submitAttempt(attemptId: string, body: { answers: Record<string, string>; time_taken_seconds: number }, options: RequestInit = {}) {
+      return apiFetch(`/tests/attempts/${attemptId}/submit`, { ...options, method: "POST", body: JSON.stringify(body) });
+    },
+    async create(body: {
+      batch_id: string;
+      subject_id?: string;
+      title: string;
+      description?: string;
+      duration_minutes?: number;
+      total_marks?: number;
+      negative_marking?: number;
+      pass_percentage?: number;
+      starts_at?: string;
+      ends_at?: string;
+    }, options: RequestInit = {}) {
+      return apiFetch<{ test: any }>("/tests", { ...options, method: "POST", body: JSON.stringify(body) });
+    },
+    async update(id: string, body: Record<string, any>, options: RequestInit = {}) {
+      return apiFetch<{ test: any }>(`/tests/${id}`, { ...options, method: "PUT", body: JSON.stringify(body) });
+    },
+    async publish(id: string, isPublished: boolean, options: RequestInit = {}) {
+      return apiFetch<{ test: any }>(`/tests/${id}/publish`, { ...options, method: "PUT", body: JSON.stringify({ is_published: isPublished }) });
+    },
+    async deleteTest(id: string, options: RequestInit = {}) {
+      return apiFetch(`/tests/${id}`, { ...options, method: "DELETE" });
+    },
+    async getQuestions(testId: string, options: RequestInit = {}) {
+      return apiFetch<{ questions: any[] }>(`/tests/${testId}/questions`, options);
+    },
+    async addQuestion(testId: string, body: {
+      question: string;
+      option_a: string;
+      option_b: string;
+      option_c: string;
+      option_d: string;
+      correct_option: string;
+      explanation?: string;
+      marks?: number;
+      question_order?: number;
+    }, options: RequestInit = {}) {
+      return apiFetch<{ question: any }>(`/tests/${testId}/questions`, { ...options, method: "POST", body: JSON.stringify(body) });
+    },
+    async removeQuestion(questionId: string, options: RequestInit = {}) {
+      return apiFetch(`/tests/questions/${questionId}`, { ...options, method: "DELETE" });
     },
   },
 
