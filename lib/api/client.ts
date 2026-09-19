@@ -394,10 +394,10 @@ export const api = {
     },
   },
   payments: {
-    async createOrder(batchId: string, concessionId?: string) {
+    async createOrder(batchId: string, concessionId?: string, discountType?: string) {
       return apiFetch("/payments/create-order", {
         method: "POST",
-        body: JSON.stringify({ batch_id: batchId, concession_id: concessionId }),
+        body: JSON.stringify({ batch_id: batchId, concession_id: concessionId, discount_type: discountType }),
       });
     },
     async verify(data: {

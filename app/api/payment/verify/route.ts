@@ -1,19 +1,40 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { cookies } from "next/headers";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isVpsApiEnabled } from "@/lib/api/config";
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, batchId } = body;
+
+    if (isVpsApiEnabled()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("vi_session")?.value;
+        if (token) {
+          const headers = { Cookie: `vi_session=${token}`, Authorization: `Bearer ${token}` };
+          const { data, error } = await apiFetch("/payments/verify", {
+            method: "POST",
+            body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
+            headers,
+          });
+
+          if (!error && data) {
+            return NextResponse.json(data);
+          }
+        }
+      } catch {
+        // Fallback to Supabase on failure
+      }
+    }
+
     const supabase = await createRouteClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, batchId } =
-      await req.json();
 
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
@@ -98,4 +119,12 @@ export async function POST(req: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
+}
+
+async function apiFetch(endpoint: string, options: RequestInit = {}) {
+  const { API_BASE_URL } = await import("@/lib/api/config");
+  const url = `${API_BASE_URL}${endpoint}`;
+  const res = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...options.headers } });
+  if (!res.ok) throw new Error("API Error");
+  return { data: await res.json(), error: null };
 }
