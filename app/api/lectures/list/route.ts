@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
 
 export async function GET(req: Request) {
   try {
@@ -10,6 +12,21 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const batchId = searchParams.get("batchId");
     const subjectId = searchParams.get("subjectId");
+
+    // Progressive Migration: If VPS API enabled, try it first
+    if (isVpsApiEnabled()) {
+      try {
+        const { data, error } = await api.lectures.list({
+          batchId: batchId || undefined,
+          subjectId: subjectId || undefined,
+        });
+        if (!error && data?.lectures) {
+          return NextResponse.json({ lectures: data.lectures });
+        }
+      } catch {
+        // Fall through to Supabase
+      }
+    }
 
     let query = supabase
       .from("lectures")

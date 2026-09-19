@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -8,6 +10,18 @@ export async function GET(req: Request) {
 
   if (!subjectId) {
     return NextResponse.json({ error: "subjectId is required" }, { status: 400 });
+  }
+
+  // Progressive Migration: If VPS API enabled, try it first
+  if (isVpsApiEnabled()) {
+    try {
+      const { data, error } = await api.batches.getChapters(subjectId);
+      if (!error && data?.chapters) {
+        return NextResponse.json({ chapters: data.chapters });
+      }
+    } catch {
+      // Fall through to Supabase
+    }
   }
 
   const query = supabaseAdmin

@@ -1,3 +1,6 @@
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
+
 export type Batch = {
   id: string;
   uuid: string;
@@ -90,6 +93,17 @@ export async function fetchBatchBySlug(slug: string): Promise<Batch | null> {
 }
 
 export async function fetchBatchById(supabase: any, id: string): Promise<Batch | null> {
+  if (isVpsApiEnabled()) {
+    try {
+      const { data, error } = await api.batches.getBySlug(id);
+      if (!error && data?.batch) {
+        return toBatchDisplay(data.batch);
+      }
+    } catch {
+      // Fall through to Supabase
+    }
+  }
+
   const { data, error } = await supabase
     .from("batches")
     .select("*")

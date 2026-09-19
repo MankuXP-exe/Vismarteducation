@@ -93,6 +93,14 @@ export const api = {
 
   // ── Lectures & Streaming
   lectures: {
+    async list(params?: { batchId?: string; subjectId?: string; chapterId?: string }) {
+      const sp = new URLSearchParams();
+      if (params?.batchId) sp.set("batchId", params.batchId);
+      if (params?.subjectId) sp.set("subjectId", params.subjectId);
+      if (params?.chapterId) sp.set("chapterId", params.chapterId);
+      const query = sp.toString() ? `?${sp.toString()}` : "";
+      return apiFetch<{ lectures: any[] }>(`/lectures${query}`);
+    },
     async getById(id: string) {
       return apiFetch<{ lecture: any; streamUrl?: string; playbackToken?: string }>(`/lectures/${id}`);
     },
@@ -115,6 +123,15 @@ export const api = {
 
   // ── Study Materials & Notes
   notes: {
+    async list(params?: { batchId?: string; subjectId?: string; chapterId?: string; type?: string }) {
+      const sp = new URLSearchParams();
+      if (params?.batchId) sp.set("batchId", params.batchId);
+      if (params?.subjectId) sp.set("subjectId", params.subjectId);
+      if (params?.chapterId) sp.set("chapterId", params.chapterId);
+      if (params?.type && params.type !== "all") sp.set("type", params.type);
+      const query = sp.toString() ? `?${sp.toString()}` : "";
+      return apiFetch<{ materials: any[] }>(`/notes${query}`);
+    },
     getDownloadUrl(id: string) {
       return `${API_BASE_URL}/notes/${id}/download`;
     },

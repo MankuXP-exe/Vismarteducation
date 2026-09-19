@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
 
 export async function GET(req: Request) {
   try {
@@ -10,6 +12,18 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
+
+    // Progressive Migration: If VPS API enabled, try it first
+    if (isVpsApiEnabled()) {
+      try {
+        const { data, error } = await api.notes.list({ type: type || undefined });
+        if (!error && data?.materials) {
+          return NextResponse.json({ materials: data.materials });
+        }
+      } catch {
+        // Fall through to Supabase
+      }
+    }
 
     let query = supabaseAdmin
       .from("study_materials")

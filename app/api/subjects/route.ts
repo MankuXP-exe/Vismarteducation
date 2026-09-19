@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { api } from "@/lib/api/client";
+import { isVpsApiEnabled } from "@/lib/api/config";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -7,6 +9,18 @@ export async function GET(req: Request) {
 
   if (!batchId) {
     return NextResponse.json({ error: "batchId is required" }, { status: 400 });
+  }
+
+  // Progressive Migration: If VPS API enabled, try it first
+  if (isVpsApiEnabled()) {
+    try {
+      const { data, error } = await api.batches.getSubjects(batchId);
+      if (!error && data?.subjects && data.subjects.length > 0) {
+        return NextResponse.json({ subjects: data.subjects });
+      }
+    } catch {
+      // Fall through to Supabase
+    }
   }
 
   try {
