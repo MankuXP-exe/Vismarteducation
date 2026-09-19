@@ -97,7 +97,7 @@ hlsEncryption: no
 webrtc: yes
 webrtcAddress: :8889
 webrtcAdditionalHosts: [187.127.172.181]
-webrtcICEUDPMuxAddress: :8890
+webrtcICEUDPMuxAddress: :8189
 webrtcICETCPMuxAddress: :8189
 
 srt: yes
@@ -433,7 +433,8 @@ ufw allow 1935/tcp  # RTMP
 ufw allow 8888/tcp  # HLS
 ufw allow 8889/tcp  # WebRTC TCP
 ufw allow 8890/udp  # WebRTC UDP
-ufw allow 8189/udp  # WebRTC TCP Mux
+ufw allow 8189/udp  # WebRTC ICE UDP
+ufw allow 8189/tcp  # WebRTC ICE TCP
 ufw allow 3001/tcp  # Streaming API
 ufw allow 9997/tcp  # MediaMTX API (internal only)
 

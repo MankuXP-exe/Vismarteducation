@@ -29,7 +29,7 @@ webrtc: yes
 webrtcAddress: :8889
 # Public IP for ICE candidates (VPS public IP)
 webrtcAdditionalHosts: [187.127.172.181]
-webrtcICEUDPMuxAddress: :8890
+webrtcICEUDPMuxAddress: :8189
 webrtcICETCPMuxAddress: :8189
 
 # SRT (optional, good for unreliable networks)
