@@ -1,4 +1,10 @@
-import type { User } from "@supabase/supabase-js";
+export type User = {
+  id: string;
+  email?: string;
+  role?: string;
+  app_metadata?: any;
+  user_metadata?: any;
+};
 
 type ProfileRole = {
   role?: string | null;

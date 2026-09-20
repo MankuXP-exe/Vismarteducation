@@ -25,7 +25,7 @@ export async function GET() {
       ]);
       dbStats = {
         students: students.count ?? 0,
-        revenue: (payments.data ?? []).reduce((sum, p) => sum + Number(p.amount || 0), 0),
+        revenue: (payments.data ?? []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0),
         batches: batches.count ?? 0,
         liveToday: liveToday.count ?? 0,
       };

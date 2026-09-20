@@ -25,7 +25,7 @@ export default async function ManageBatchPage({ params }: { params: Promise<{ ba
         {!liveClasses || liveClasses.length === 0 ? (
           <p className="border-t border-gray-100 py-4 text-sm text-gray-500">No live classes scheduled for this batch.</p>
         ) : (
-          liveClasses.map((liveClass) => (
+          liveClasses.map((liveClass: any) => (
             <Link
               key={liveClass.id}
               href={`/teacher/live/${liveClass.id}`}

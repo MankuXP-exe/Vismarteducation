@@ -109,7 +109,7 @@ async function getVisibleBatches() {
 
     return {
       role,
-      cards: (data ?? []).map((batch) => ({
+      cards: (data ?? []).map((batch: any) => ({
         batch,
         status: "active" as const,
         accessEndDate: null,
@@ -139,7 +139,7 @@ async function getVisibleBatches() {
         status: (item.status ?? "pending") as BatchCard["status"],
         accessEndDate: item.access_end_date as string | null,
       }))
-      .filter((item) => item.batch?.id),
+      .filter((item: any) => item.batch?.id),
   };
 }
 
@@ -180,7 +180,7 @@ export default async function BatchesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map(({ batch, status, accessEndDate }) => {
+          {cards.map(({ batch, status, accessEndDate }: any) => {
             const isExpired = status === "expired";
             const image = batch.thumbnail_url || batch.banner_url || "/images/logo-transparentbg.png";
             const expiresOn = formatDate(accessEndDate);

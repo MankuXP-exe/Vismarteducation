@@ -115,7 +115,7 @@ async function getBatchPageData(batchId: string) {
     .order("sort_order", { ascending: true });
 
   const existingNames = new Set(
-    (existingSubjectsResult.data ?? []).map((subject) => normalizeSubjectName(subject.name))
+    (existingSubjectsResult.data ?? []).map((subject: any) => normalizeSubjectName(subject.name))
   );
   const missingSubjects = officialSubjects.filter(
     (subject) => !existingNames.has(normalizeSubjectName(subject))

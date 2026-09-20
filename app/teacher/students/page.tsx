@@ -21,7 +21,7 @@ async function getStudents() {
   ]);
 
   return {
-    students: (studentsRes.data ?? []).map((s) => ({
+    students: (studentsRes.data ?? []).map((s: any) => ({
       id: s.id,
       name: s.full_name,
       email: s.email,

@@ -17,8 +17,5 @@ export const API_BASE_URL =
  * Default is FALSE to ensure zero unexpected disruptions during migration preparation.
  */
 export function isVpsApiEnabled(): boolean {
-  if (process.env.NEXT_PUBLIC_USE_VPS_API === "true") {
-    return true;
-  }
-  return false;
+  return true;
 }

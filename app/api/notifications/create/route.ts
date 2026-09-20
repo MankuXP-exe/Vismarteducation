@@ -33,13 +33,13 @@ export async function POST(req: Request) {
       if (roleFilter) q = q.eq("role", roleFilter);
       if (batchId) {
         const { data: enrollments } = await supabase.from("enrollments").select("student_id").eq("batch_id", batchId);
-        const stuIds = enrollments?.map((e) => e.student_id) || [];
+        const stuIds = enrollments?.map((e: any) => e.student_id) || [];
         q = q.in("id", stuIds);
       }
       const { data: profiles } = await q;
       if (!profiles?.length) return NextResponse.json({ error: "No recipients found" }, { status: 400 });
 
-      const inserts = profiles.map((p) => ({
+      const inserts = profiles.map((p: any) => ({
         user_id: p.id,
         title,
         message,

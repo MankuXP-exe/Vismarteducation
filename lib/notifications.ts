@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { api } from "@/lib/api/client";
 
 export async function notifyBatchStudents(
   batchId: string,
@@ -7,25 +7,21 @@ export async function notifyBatchStudents(
   type: "live_class" | "new_lecture",
   actionUrl: string
 ) {
-  const { data: enrollments } = await supabaseAdmin
-    .from("enrollments")
-    .select("student_id")
-    .eq("batch_id", batchId)
-    .eq("status", "active");
+  try {
+    const message =
+      type === "live_class"
+        ? `Teacher ${teacherName} started a live class "${title}". Join now!`
+        : `Teacher ${teacherName} added a new lecture "${title}".`;
 
-  if (!enrollments || enrollments.length === 0) return;
-
-  const message = type === "live_class"
-    ? `Teacher ${teacherName} started a live class "${title}". Join now!`
-    : `Teacher ${teacherName} added a new lecture "${title}".`;
-
-  const notifications = enrollments.map((e) => ({
-    user_id: e.student_id,
-    title,
-    message,
-    type,
-    action_url: actionUrl,
-  }));
-
-  await supabaseAdmin.from("notifications").insert(notifications);
+    await api.notifications.create({
+      batchId,
+      title,
+      message,
+      type,
+      actionUrl,
+      targetRole: "students",
+    });
+  } catch (err) {
+    console.warn("Failed to dispatch batch notifications:", err);
+  }
 }

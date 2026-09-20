@@ -40,7 +40,7 @@ export default async function TeacherBatchesPage() {
             {(!batches || batches.length === 0) && (
               <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No batches found.</td></tr>
             )}
-            {batches?.map((batch) => (
+            {batches?.map((batch: any) => (
               <tr key={batch.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">

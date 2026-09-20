@@ -46,7 +46,7 @@ async function getDashboardData() {
     teachers: teachersRes.count ?? 0,
     batches: batchesRes.count ?? 0,
     activeEnrollments: enrollmentsRes.count ?? 0,
-    revenue: (paymentsRes.data ?? []).reduce((sum, p) => sum + Number(p.amount || 0), 0),
+    revenue: (paymentsRes.data ?? []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0),
     liveToday: liveTodayRes.count ?? 0,
     pendingConcessions: concessionsRes.count ?? 0,
     lectureCount: lecturesRes.count ?? 0,

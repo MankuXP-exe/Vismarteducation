@@ -409,11 +409,27 @@ export const api = {
     async list() {
       return apiFetch<{ notifications: any[]; unreadCount: number }>("/notifications");
     },
+    async create(data: { batchId?: string; title: string; message: string; type?: string; actionUrl?: string; targetRole?: string }) {
+      return apiFetch("/notifications", { method: "POST", body: JSON.stringify(data) });
+    },
     async markRead(id: string) {
       return apiFetch(`/notifications/${id}/read`, { method: "PATCH" });
     },
     async markAllRead() {
       return apiFetch("/notifications/mark-all-read", { method: "POST" });
+    },
+  },
+
+  // ── XP & Gamification
+  xp: {
+    async award(data: { action: string; metadata?: Record<string, any> }) {
+      return apiFetch<{ xpEarned: number; newLevel: number; streakDays: number; newBadges: string[] }>("/xp/award", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    async getStats() {
+      return apiFetch("/xp/stats");
     },
   },
 

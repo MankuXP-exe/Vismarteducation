@@ -72,7 +72,7 @@ async function getRecentLearning() {
     .order("last_watched_at", { ascending: false })
     .limit(20);
 
-  const lectureIds = (progressRows ?? []).map((row) => row.lecture_id).filter(Boolean);
+  const lectureIds = (progressRows ?? []).map((row: any) => row.lecture_id).filter(Boolean);
   if (lectureIds.length === 0) return [];
 
   const { data: lectures } = await supabaseAdmin
@@ -80,7 +80,7 @@ async function getRecentLearning() {
     .select("id,title,batch_id,subject_id,chapter_id,cloudflare_thumbnail_url")
     .in("id", lectureIds);
 
-  const lectureById = new Map((lectures ?? []).map((lecture) => [lecture.id, lecture]));
+  const lectureById = new Map((lectures ?? []).map((lecture: any) => [lecture.id, lecture]));
 
   return (progressRows ?? [])
     .map((progress: any) => {

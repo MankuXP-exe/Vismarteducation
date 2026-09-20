@@ -1,32 +1,34 @@
-import { createServerClient as _createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { API_BASE_URL } from "@/lib/api/config";
 
-export async function createServerClient() {
+export async function createServerClient(): Promise<any> {
   const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("vi_session")?.value;
 
-  return _createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // The `setAll` method is called from a Server Component,
-            // which can't set cookies — ignore silently.
+  return {
+    auth: {
+      async getUser() {
+        if (!sessionCookie) return { data: { user: null }, error: null };
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: {
+              Cookie: `vi_session=${sessionCookie}`,
+              Authorization: `Bearer ${sessionCookie}`,
+            },
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.user) {
+              return { data: { user: json.user }, error: null };
+            }
           }
-        },
+        } catch {}
+        return { data: { user: null }, error: null };
       },
-    }
-  );
+    },
+  };
 }
 
-export async function createRouteClient() {
+export async function createRouteClient(): Promise<any> {
   return createServerClient();
 }
