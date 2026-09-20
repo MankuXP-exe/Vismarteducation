@@ -3,16 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 import { api } from "@/lib/api/client";
-import { isVpsApiEnabled } from "@/lib/api/config";
 
 export default function LoginClient() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/dashboard";
   const message = searchParams.get("message");
-  const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,43 +21,24 @@ export default function LoginClient() {
     setError("");
     setLoading(true);
 
-    // Progressive Migration: If VPS API enabled, try it first
-    if (isVpsApiEnabled()) {
-      try {
-        const { data, error: vpsError } = await api.auth.login({ email, password });
-        if (!vpsError && data?.success) {
-          window.location.href = redirect;
-          return;
-        }
-        if (vpsError) {
-          setError(vpsError);
-          setLoading(false);
-          return;
-        }
-      } catch {
-        // Fall through to Supabase on network exception
+    try {
+      const { data, error: vpsError } = await api.auth.login({ email, password });
+      if (!vpsError && data?.success) {
+        window.location.href = redirect;
+        return;
       }
-    }
-
-    // Supabase fallback (production default)
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (loginError) {
-      setError("Invalid email or password");
+      if (vpsError) {
+        setError(vpsError);
+        setLoading(false);
+        return;
+      }
+    } catch {
+      setError("Network error. Please try again.");
       setLoading(false);
       return;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      window.location.href = redirect;
-    } else {
-      setError("Session not created. Please try again.");
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   return (

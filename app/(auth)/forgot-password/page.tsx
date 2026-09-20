@@ -2,17 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 
 import { apiFetch } from "@/lib/api/client";
-import { isVpsApiEnabled } from "@/lib/api/config";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   async function resetPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -20,35 +17,28 @@ export default function ForgotPasswordPage() {
     setError("");
     setMessage("");
 
-    // Progressive Migration: If VPS API enabled, try it first
-    if (isVpsApiEnabled()) {
-      try {
-        const { data, error: vpsErr } = await apiFetch<{ success: boolean; message: string }>("/auth/forgot-password", {
-          method: "POST",
-          body: JSON.stringify({ email }),
-        });
-        if (!vpsErr && data?.success) {
-          setLoading(false);
-          setMessage(data.message || "Password reset instructions have been dispatched.");
-          return;
-        }
-        if (vpsErr) {
-          setLoading(false);
-          setError(vpsErr);
-          return;
-        }
-      } catch {
-        // Fall through to Supabase on exception
+    try {
+      const { data, error: vpsErr } = await apiFetch<{ success: boolean; message: string }>("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      if (!vpsErr && data?.success) {
+        setLoading(false);
+        setMessage(data.message || "Password reset instructions have been dispatched.");
+        return;
       }
+      if (vpsErr) {
+        setLoading(false);
+        setError(vpsErr);
+        return;
+      }
+    } catch {
+      setError("Network error. Please try again.");
+      setLoading(false);
+      return;
     }
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/profile`,
-    });
-
     setLoading(false);
-    if (resetError) setError(resetError.message);
-    else setMessage("Password reset link sent. Please check your email.");
   }
 
   return (

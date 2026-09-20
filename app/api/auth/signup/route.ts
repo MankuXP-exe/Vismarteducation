@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { api } from "@/lib/api/client";
 import { isVpsApiEnabled } from "@/lib/api/config";
 
@@ -11,7 +10,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Progressive Migration: If VPS API enabled, try it first
   if (isVpsApiEnabled()) {
     try {
       const { data, error } = await api.auth.register({
@@ -30,41 +28,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error }, { status: 400 });
       }
     } catch {
-      // Fall through to Supabase
+      return NextResponse.json({ error: "Registration service unavailable" }, { status: 503 });
     }
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: {
-      full_name: fullName,
-      phone,
-      current_class: currentClass,
-      role,
-    },
-  });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-  // Also insert into profiles table
-  const { error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .insert({
-      id: data.user.id,
-      email,
-      full_name: fullName,
-      phone,
-      current_class: currentClass,
-      role,
-    });
-
-  if (profileError) {
-    // Cleanup auth user if profile insert fails
-    await supabaseAdmin.auth.admin.deleteUser(data.user.id);
-    return NextResponse.json({ error: "Failed to create profile" }, { status: 500 });
-  }
-
-  return NextResponse.json({ user: data.user });
+  return NextResponse.json({ error: "Registration service not available" }, { status: 503 });
 }
