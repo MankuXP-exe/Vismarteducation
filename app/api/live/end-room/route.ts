@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import fs from "fs";
+import path from "path";
 import { createRouteClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasTeacherAccess } from "@/lib/auth/roles";
@@ -90,19 +92,55 @@ export async function POST(req: Request) {
 
     const response = NextResponse.json({ success: true, processing: true });
 
-    // Async: poll for recording URL set by MediaMTX webhook
+    // Async: poll for recording URL set by MediaMTX webhook or local filesystem
     (async () => {
+      const roomName = liveClass.hms_room_id || `class-${liveClass.id}`;
       let recordingUrl = liveClass.recording_url || "";
+      let recordingPath = "";
+      let fileSizeMb = 0;
+
       for (let i = 0; i < 30 && !recordingUrl; i++) {
         await new Promise((r) => setTimeout(r, 2000));
-        const { data: updated } = await supabaseAdmin
-          .from("live_classes")
-          .select("recording_url, is_recording_available")
-          .eq("id", classId)
-          .single();
-        if (updated?.recording_url) {
-          recordingUrl = updated.recording_url;
-          break;
+
+        // Check local filesystem first if running on VPS
+        const candidateDirs = [
+          `/opt/vi-smart/recordings/live/live/${roomName}`,
+          `/opt/vi-smart/recordings/live/${roomName}`,
+        ];
+        for (const dir of candidateDirs) {
+          try {
+            if (fs.existsSync(dir)) {
+              const files = fs.readdirSync(dir).filter((f) => f.includes(".mp4"));
+              if (files.length > 0) {
+                const sorted = files.map((f) => ({
+                  file: f,
+                  fullPath: path.join(dir, f),
+                  stat: fs.statSync(path.join(dir, f)),
+                })).filter(item => item.stat.size > 0).sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+
+                if (sorted.length > 0) {
+                  const latest = sorted[0];
+                  recordingPath = latest.fullPath;
+                  fileSizeMb = Math.round((latest.stat.size / (1024 * 1024)) * 100) / 100;
+                  const relativePath = latest.fullPath.replace("/opt/vi-smart/recordings/", "");
+                  recordingUrl = `https://stream.vismartlearningeducation.com/recordings/${relativePath}`;
+                  break;
+                }
+              }
+            }
+          } catch {}
+        }
+
+        if (!recordingUrl) {
+          const { data: updated } = await supabaseAdmin
+            .from("live_classes")
+            .select("recording_url, is_recording_available")
+            .eq("id", classId)
+            .single();
+          if (updated?.recording_url) {
+            recordingUrl = updated.recording_url;
+            break;
+          }
         }
       }
 

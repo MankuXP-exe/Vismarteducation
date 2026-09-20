@@ -44,6 +44,8 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
 
     retryCountRef.current = 0;
     let destroyed = false;
+    let timeoutRef: ReturnType<typeof setTimeout> | null = null;
+    let hasReceivedMedia = false;
 
     async function tryWebRTC() {
       if (destroyed) return;
@@ -52,6 +54,8 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         const roomName = hlsUrl!.match(/\/live\/live\/([^/]+)\//)?.[1] || hlsUrl!.match(/\/live\/([^/]+)\//)?.[1];
         if (!roomName) throw new Error("Invalid stream URL");
 
+        console.log("[StudentLiveViewer] Initiating WebRTC WHEP for room:", roomName);
+
         const pc = new RTCPeerConnection({
           iceServers: ICE_SERVERS,
           iceTransportPolicy: "all",
@@ -59,15 +63,75 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         });
         pcRef.current = pc;
 
+        // Register transceivers
         pc.addTransceiver("video", { direction: "recvonly" });
         pc.addTransceiver("audio", { direction: "recvonly" });
+
+        // Register ontrack BEFORE SDP offer/answer to catch all dispatched tracks
+        pc.ontrack = (e) => {
+          console.log("[StudentLiveViewer] ontrack received track kind:", e.track.kind, "id:", e.track.id, "streams:", e.streams?.length);
+          hasReceivedMedia = true;
+          if (timeoutRef) clearTimeout(timeoutRef);
+
+          const vid = videoRef.current;
+          if (!vid) return;
+
+          if (e.streams && e.streams[0]) {
+            vid.srcObject = e.streams[0];
+          } else {
+            // MediaMTX WHEP stream fallback (when SDP omits a=msid)
+            if (!vid.srcObject || !(vid.srcObject instanceof MediaStream)) {
+              vid.srcObject = new MediaStream();
+            }
+            (vid.srcObject as MediaStream).addTrack(e.track);
+          }
+
+          // Force DOM-level muted to prevent browser autoplay blocking
+          vid.muted = true;
+          setMuted(true);
+
+          vid.play().then(() => {
+            console.log("[StudentLiveViewer] WebRTC playback active");
+            setPlaying(true);
+            setLoading(false);
+          }).catch((err) => {
+            console.warn("[StudentLiveViewer] Autoplay deferred:", err.message);
+            setLoading(false);
+            setPlaying(false);
+          });
+        };
+
+        pc.onconnectionstatechange = () => {
+          console.log("[StudentLiveViewer] WebRTC connectionState:", pc.connectionState);
+          if (pc.connectionState === "connected") {
+            // ICE and DTLS fully established
+            setTimeout(() => {
+              if (!destroyed && loading) setLoading(false);
+            }, 1000);
+          } else if (pc.connectionState === "failed") {
+            if (!destroyed) {
+              console.warn("[StudentLiveViewer] WebRTC connection failed, falling back to HLS...");
+              fallbackToHLS();
+            }
+          }
+        };
+
+        pc.oniceconnectionstatechange = () => {
+          console.log("[StudentLiveViewer] WebRTC iceConnectionState:", pc.iceConnectionState);
+          if (pc.iceConnectionState === "failed") {
+            if (!destroyed) {
+              console.warn("[StudentLiveViewer] WebRTC ICE failed, falling back to HLS...");
+              fallbackToHLS();
+            }
+          }
+        };
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        // Wait for ICE gathering to complete or timeout gracefully
+        // Wait up to 2 seconds for local candidates (or until gathering completes)
         await new Promise<void>((resolve) => {
-          const timer = setTimeout(() => resolve(), 3500);
+          const timer = setTimeout(() => resolve(), 2000);
           pc.onicecandidate = (e) => {
             if (!e.candidate) {
               clearTimeout(timer);
@@ -83,40 +147,25 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
           body: pc.localDescription!.sdp,
         });
 
-        if (!res.ok) throw new Error(`WHEP error ${res.status}`);
+        if (!res.ok) {
+          throw new Error(`WHEP endpoint returned status ${res.status}`);
+        }
 
         const answer = await res.text();
         await pc.setRemoteDescription({ type: "answer", sdp: answer });
+        console.log("[StudentLiveViewer] Set remote SDP answer successfully");
 
-        pc.ontrack = (e) => {
-          if (videoRef.current && e.streams[0]) {
-            videoRef.current.srcObject = e.streams[0];
-            videoRef.current.play().then(() => {
-              setPlaying(true);
-              setLoading(false);
-            }).catch(() => {});
+        // 8-second safety timeout: if no video media track arrives, fall back to HLS
+        timeoutRef = setTimeout(() => {
+          if (!destroyed && !hasReceivedMedia) {
+            console.warn("[StudentLiveViewer] No media received after 8s. Falling back to HLS...");
+            fallbackToHLS();
           }
-        };
+        }, 8000);
 
-        pc.oniceconnectionstatechange = () => {
-          if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
-            if (!destroyed) {
-              retryCountRef.current++;
-              if (retryCountRef.current >= 30) {
-                setError("Connection lost. Retrying with HLS...");
-                fallbackToHLS();
-                return;
-              }
-              retryRef.current = setTimeout(() => {
-                pc.close();
-                tryWebRTC();
-              }, 2000);
-            }
-          }
-        };
       } catch (err: any) {
         if (!destroyed) {
-          console.warn("WebRTC WHEP failed, falling back to HLS:", err.message);
+          console.warn("[StudentLiveViewer] WebRTC setup error, falling back to HLS:", err.message);
           fallbackToHLS();
         }
       }
@@ -194,6 +243,7 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
     return () => {
       destroyed = true;
       if (retryRef.current) clearTimeout(retryRef.current);
+      if (timeoutRef) clearTimeout(timeoutRef);
       pcRef.current?.close();
       pcRef.current = null;
     };
@@ -312,6 +362,8 @@ export default function StudentLiveViewer({ classId, classStatus, hlsUrl }: Prop
         playsInline
         muted={muted}
         onClick={togglePlay}
+        onLoadedMetadata={() => setLoading(false)}
+        onCanPlay={() => setLoading(false)}
         className="h-full w-full cursor-pointer"
         style={{ objectFit: "contain", aspectRatio: "16 / 9" }}
       />
