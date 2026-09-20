@@ -40,12 +40,8 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
 
-    // Increment total_attendees for active live sessions asynchronously
-    if (data && data.status === "live") {
-      void supabaseAdmin
-        .from("live_classes")
-        .update({ total_attendees: (data.total_attendees || 0) + 1 })
-        .eq("id", classId);
+    if (data && data.is_recording_available) {
+      data.recording_url = `/api/live/recording/stream?classId=${data.id}`;
     }
 
     return NextResponse.json({ data });
