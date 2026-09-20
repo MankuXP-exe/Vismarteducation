@@ -40,6 +40,14 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
 
+    // Increment total_attendees for active live sessions asynchronously
+    if (data && data.status === "live") {
+      void supabaseAdmin
+        .from("live_classes")
+        .update({ total_attendees: (data.total_attendees || 0) + 1 })
+        .eq("id", classId);
+    }
+
     return NextResponse.json({ data });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
