@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { User } from "@/lib/auth/roles";
 import type { Profile } from "@/types";
 import { api } from "@/lib/api/client";
+import { createClient } from "@/lib/supabase/client";
 
 interface AuthContextType {
   user: User | null;
@@ -23,66 +24,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
     let active = true;
 
-    async function checkAuth() {
-      try {
-        const { data, error } = await api.auth.getMe();
-        if (!error && data?.authenticated && data.user) {
-          if (!active) return;
-          setUser({
-            id: data.user.id,
-            email: data.user.email,
-            role: data.user.role,
-            app_metadata: { role: data.user.role },
-            user_metadata: {
-              full_name: data.profile?.full_name,
-              role: data.user.role,
-            },
-          } as any);
-          setProfile(data.profile ?? null);
-          setLoading(false);
-          return;
-        }
-      } catch {}
+    async function fetchVpsProfile() {
+      const { data, error } = await api.auth.getMe();
+      if (!active) return;
+      if (!error && data?.authenticated) {
+        setUser(data.user);
+        setProfile(data.profile);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+      setLoading(false);
+    }
 
-      if (active) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchVpsProfile();
+      } else {
         setUser(null);
         setProfile(null);
         setLoading(false);
       }
-    }
+    });
 
-    checkAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      if (session) {
+        setLoading(true);
+        fetchVpsProfile();
+      } else {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+      }
+    });
 
     return () => {
       active = false;
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase.auth]);
 
-  const handleSignOut = async () => {
-    try {
-      await api.auth.logout();
-    } catch {}
+  const signOut = async () => {
+    setLoading(true);
+    await supabase.auth.signOut();
+    // Fastify logout is no longer necessary as it's stateless via Supabase JWT
+    // but we can call it if we want to clear legacy cookies. We won't.
     setUser(null);
     setProfile(null);
+    setLoading(false);
     window.location.href = "/login";
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        loading,
-        signOut: handleSignOut,
-      }}
-    >
+    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}

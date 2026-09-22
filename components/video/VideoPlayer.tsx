@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { updateLectureProgress } from "@/lib/supabase/queries";
+import { api } from "@/lib/api/client";
 
 type Props = {
   videoUrl: string;
   lectureId: string;
   batchId: string;
   studentId: string;
-  lastPosition?: number;
+  title?: string;
+  autoPlay?: boolean;
 };
 
 export default function VideoPlayer({
@@ -16,43 +17,49 @@ export default function VideoPlayer({
   lectureId,
   batchId,
   studentId,
-  lastPosition = 0,
+  title,
+  autoPlay = true,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
+  
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const onLoadedMetadata = () => {
-      if (lastPosition > 0) video.currentTime = lastPosition;
+      setDuration(video.duration);
       setIsReady(true);
     };
 
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     progressInterval.current = setInterval(async () => {
       if (!video.paused && video.duration) {
-        await updateLectureProgress({
-          studentId,
-          lectureId,
-          batchId,
+        await api.lectures.updateProgress(lectureId, {
           watchedSeconds: Math.floor(video.currentTime),
           totalSeconds: Math.floor(video.duration),
-          lastPosition: Math.floor(video.currentTime),
         });
       }
-    }, 10000);
+    }, 10000); // Save every 10 seconds
 
     return () => {
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
-      if (progressInterval.current) clearInterval(progressInterval.current);
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
     };
-  }, [batchId, lastPosition, lectureId, studentId, videoUrl]);
+  }, [lectureId, batchId, studentId]);
 
   return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+    <div ref={containerRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
       {!isReady && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />

@@ -1,34 +1,33 @@
-import { cookies } from "next/headers";
-import { API_BASE_URL } from "@/lib/api/config";
+import { createServerClient as ssrCreateServerClient, type CookieOptions } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-export async function createServerClient(): Promise<any> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("vi_session")?.value;
+export async function createClient() {
+  const cookieStore = await cookies()
 
-  return {
-    auth: {
-      async getUser() {
-        if (!sessionCookie) return { data: { user: null }, error: null };
-        try {
-          const res = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: {
-              Cookie: `vi_session=${sessionCookie}`,
-              Authorization: `Bearer ${sessionCookie}`,
-            },
-          });
-          if (res.ok) {
-            const json = await res.json();
-            if (json.user) {
-              return { data: { user: json.user }, error: null };
-            }
+  return ssrCreateServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch (error) {
           }
-        } catch {}
-        return { data: { user: null }, error: null };
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: '', ...options })
+          } catch (error) {
+          }
+        },
       },
-    },
-  };
+    }
+  )
 }
 
-export async function createRouteClient(): Promise<any> {
-  return createServerClient();
-}
+export const createServerClient = createClient;
+export const createRouteClient = createClient;

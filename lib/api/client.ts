@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./config";
+import { createClient as createBrowserClient } from "../supabase/client";
 
 export interface ApiResponse<T> {
   data?: T;
@@ -15,6 +16,14 @@ export async function apiFetch<T = any>(
   const headers = new Headers(options.headers || {});
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
+  }
+
+  if (typeof window !== "undefined" && !headers.has("Authorization")) {
+    const supabase = createBrowserClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers.set("Authorization", `Bearer ${session.access_token}`);
+    }
   }
 
   try {
