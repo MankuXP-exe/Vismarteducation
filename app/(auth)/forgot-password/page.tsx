@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-
-import { apiFetch } from "@/lib/api/client";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   async function resetPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -18,27 +18,22 @@ export default function ForgotPasswordPage() {
     setMessage("");
 
     try {
-      const { data, error: vpsErr } = await apiFetch<{ success: boolean; message: string }>("/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email }),
+      const { error: supaError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/dashboard/profile`,
       });
-      if (!vpsErr && data?.success) {
+      
+      if (supaError) {
         setLoading(false);
-        setMessage(data.message || "Password reset instructions have been dispatched.");
+        setError(supaError.message);
         return;
       }
-      if (vpsErr) {
-        setLoading(false);
-        setError(vpsErr);
-        return;
-      }
+      
+      setLoading(false);
+      setMessage("Password reset instructions have been dispatched.");
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
-      return;
     }
-
-    setLoading(false);
   }
 
   return (

@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-
-import { api } from "@/lib/api/client";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginClient() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/dashboard";
   const message = searchParams.get("message");
+  const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,23 +22,22 @@ export default function LoginClient() {
     setLoading(true);
 
     try {
-      const { data, error: vpsError } = await api.auth.login({ email, password });
-      if (!vpsError && data?.success) {
-        window.location.href = redirect;
-        return;
-      }
-      if (vpsError) {
-        setError(vpsError);
+      const { error: supaError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (supaError) {
+        setError(supaError.message);
         setLoading(false);
         return;
       }
+      
+      // Successful login creates the session, middleware syncs cookie. Redirect!
+      window.location.href = redirect;
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
-      return;
     }
-
-    setLoading(false);
   };
 
   return (
