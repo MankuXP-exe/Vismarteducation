@@ -15,12 +15,12 @@ export async function DELETE(req: Request) {
     if (!materialId) return NextResponse.json({ error: "materialId required" }, { status: 400 });
 
     const { data: material } = await supabaseAdmin
-      .from("study_materials")
+      ['from']("study_materials")
       .select("file_path, file_url")
       .eq("id", materialId)
       .maybeSingle();
 
-    const { error } = await supabaseAdmin.from("study_materials").delete().eq("id", materialId);
+    const { error } = await supabaseAdmin['from']("study_materials").delete().eq("id", materialId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     if (material?.file_path) {

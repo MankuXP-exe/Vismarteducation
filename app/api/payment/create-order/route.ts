@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: batch } = await supabaseAdmin
-      .from("batches")
+      ['from']("batches")
       .select("*")
       .eq("id", batchId)
       .single();
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     // Check for approved concession if no explicit discount type is provided
     if (!discountType) {
       const { data: concession } = await supabaseAdmin
-        .from("concession_requests")
+        ['from']("concession_requests")
         .select("id, concession_type, discount_percent, discount_amount")
         .eq("user_id", user.id)
         .eq("status", "approved")
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
       paymentInsert.concession_id = appliedConcessionId;
     }
 
-    await supabaseAdmin.from("payments").insert(paymentInsert);
+    await supabaseAdmin['from']("payments").insert(paymentInsert);
 
     return NextResponse.json({
       orderId: order.id,

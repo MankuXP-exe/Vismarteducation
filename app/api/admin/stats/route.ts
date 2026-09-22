@@ -18,10 +18,10 @@ export async function GET() {
 
     if (isSupabaseAdminConfigured) {
       const [students, payments, batches, liveToday] = await Promise.all([
-        supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student"),
-        supabaseAdmin.from("payments").select("amount").eq("status", "success"),
-        supabaseAdmin.from("batches").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabaseAdmin.from("live_classes").select("id", { count: "exact", head: true }).gte("scheduled_at", today.toISOString()).lt("scheduled_at", tomorrow.toISOString()),
+        supabaseAdmin['from']("profiles").select("id", { count: "exact", head: true }).eq("role", "student"),
+        supabaseAdmin['from']("payments").select("amount").eq("status", "success"),
+        supabaseAdmin['from']("batches").select("id", { count: "exact", head: true }).eq("is_active", true),
+        supabaseAdmin['from']("live_classes").select("id", { count: "exact", head: true }).gte("scheduled_at", today.toISOString()).lt("scheduled_at", tomorrow.toISOString()),
       ]);
       dbStats = {
         students: students.count ?? 0,

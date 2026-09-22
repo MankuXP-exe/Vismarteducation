@@ -10,7 +10,7 @@ import { api } from "@/lib/api/client";
 
 async function ensureChapterRecord(batchId: string, subjectId: string, title?: string) {
   const { data: maxChapter } = await supabaseAdmin
-    .from("chapters")
+    ['from']("chapters")
     .select("chapter_number")
     .eq("batch_id", batchId)
     .eq("subject_id", subjectId)
@@ -22,7 +22,7 @@ async function ensureChapterRecord(batchId: string, subjectId: string, title?: s
   const chapterTitle = title || `Chapter ${nextNumber}`;
 
   const { data, error } = await supabaseAdmin
-    .from("chapters")
+    ['from']("chapters")
     .insert({ batch_id: batchId, subject_id: subjectId, chapter_number: nextNumber, title: chapterTitle, is_active: true })
     .select("id")
     .single();
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: profile } = await supabase
-      .from("profiles")
+      ['from']("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     }
 
     const { data: liveClass } = await supabaseAdmin
-      .from("live_classes")
+      ['from']("live_classes")
       .select("id, hms_room_id, status, batch_id, subject_id, chapter_id, title, description, teacher_id, recording_url")
       .eq("id", classId)
       .single();
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
     // Mark as completed immediately
     await supabaseAdmin
-      .from("live_classes")
+      ['from']("live_classes")
       .update({ status: "completed", ended_at: new Date().toISOString() })
       .eq("id", classId);
 
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
 
         if (!recordingUrl) {
           const { data: updated } = await supabaseAdmin
-            .from("live_classes")
+            ['from']("live_classes")
             .select("recording_url, is_recording_available")
             .eq("id", classId)
             .single();
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
 
       if (recordingUrl) {
         await supabaseAdmin
-          .from("live_classes")
+          ['from']("live_classes")
           .update({ recording_url: recordingUrl, is_recording_available: true })
           .eq("id", classId);
 
@@ -156,7 +156,7 @@ export async function POST(req: Request) {
             chapterId = await ensureChapterRecord(liveClass.batch_id, liveClass.subject_id, liveClass.title);
           }
 
-          await supabaseAdmin.from("lectures").insert({
+          await supabaseAdmin['from']("lectures").insert({
             batch_id: liveClass.batch_id,
             subject_id: liveClass.subject_id,
             chapter_id: chapterId,

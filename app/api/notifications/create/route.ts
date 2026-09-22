@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         target_role: targetRole || null,
         batch_id: batchId || null,
       }));
-      const { error } = await supabase.from("notifications").insert(inserts);
+      const { error } = await supabase['from']("notifications").insert(inserts);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       return NextResponse.json({ count: inserts.length });
     }
@@ -29,10 +29,10 @@ export async function POST(req: Request) {
     // Send to all users matching role
     if (targetRole === "all" || targetRole === "students" || targetRole === "teachers") {
       const roleFilter = targetRole === "all" ? undefined : targetRole;
-      let q = supabase.from("profiles").select("id");
+      let q = supabase['from']("profiles").select("id");
       if (roleFilter) q = q.eq("role", roleFilter);
       if (batchId) {
-        const { data: enrollments } = await supabase.from("enrollments").select("student_id").eq("batch_id", batchId);
+        const { data: enrollments } = await supabase['from']("enrollments").select("student_id").eq("batch_id", batchId);
         const stuIds = enrollments?.map((e: any) => e.student_id) || [];
         q = q.in("id", stuIds);
       }
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         target_role: targetRole,
         batch_id: batchId || null,
       }));
-      const { error } = await supabase.from("notifications").insert(inserts);
+      const { error } = await supabase['from']("notifications").insert(inserts);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       return NextResponse.json({ count: inserts.length });
     }

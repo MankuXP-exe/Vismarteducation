@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     const { data: batch } = await supabaseAdmin
-      .from("batches")
+      ['from']("batches")
       .select("id, duration_months, title")
       .eq("id", batchId)
       .single();
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     const actualBatchId = batch?.id || batchId;
 
     const { data: payment } = await supabaseAdmin
-      .from("payments")
+      ['from']("payments")
       .select("amount, discount_type, discount_amount, concession_id")
       .eq("razorpay_order_id", razorpay_order_id)
       .single();
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     accessEndDate.setMonth(accessEndDate.getMonth() + Number(batch?.duration_months || 12));
 
     await supabaseAdmin
-      .from("payments")
+      ['from']("payments")
       .update({
         razorpay_payment_id,
         razorpay_signature,
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       .eq("razorpay_order_id", razorpay_order_id);
 
     const { data: enrollment, error } = await supabaseAdmin
-      .from("enrollments")
+      ['from']("enrollments")
       .upsert(
         {
           student_id: user.id,
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     // Mark concession as applied if one was used
     if (payment?.concession_id) {
       await supabaseAdmin
-        .from("concession_requests")
+        ['from']("concession_requests")
         .update({
           is_active: false,
           applied_at: new Date().toISOString(),
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
         .eq("id", payment.concession_id);
     }
 
-    await supabaseAdmin.from("notifications").insert({
+    await supabaseAdmin['from']("notifications").insert({
       user_id: user.id,
       title: "Enrollment successful",
       message: `You are now enrolled in ${batch?.title ?? "your batch"}. Start learning now.`,

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     // First check FAQ
     const faq = findFAQReply(question);
     if (faq) {
-      await supabase.from("doubts").update({ ai_answer: faq.reply, status: "answered_by_ai" }).eq("id", doubtId);
+      await supabase['from']("doubts").update({ ai_answer: faq.reply, status: "answered_by_ai" }).eq("id", doubtId);
       return NextResponse.json({ answer: faq.reply, source: "faq" });
     }
 
@@ -39,14 +39,14 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
-      await supabase.from("doubts").update({ status: "pending" }).eq("id", doubtId);
+      await supabase['from']("doubts").update({ status: "pending" }).eq("id", doubtId);
       return NextResponse.json({ error: "AI unavailable" }, { status: 502 });
     }
 
     const data = await res.json();
     const answer = data.choices?.[0]?.message?.content || "I couldn't process this doubt.";
 
-    await supabase.from("doubts").update({ ai_answer: answer, status: "answered_by_ai" }).eq("id", doubtId);
+    await supabase['from']("doubts").update({ ai_answer: answer, status: "answered_by_ai" }).eq("id", doubtId);
     return NextResponse.json({ answer, source: "ai" });
   } catch (err) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

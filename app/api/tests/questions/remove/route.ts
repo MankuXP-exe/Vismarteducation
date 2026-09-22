@@ -31,7 +31,7 @@ export async function DELETE(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { error } = await supabase.from("test_questions").delete().eq("id", questionId);
+    const { error } = await supabase['from']("test_questions").delete().eq("id", questionId);
     if (testId) await supabase.rpc("update_test_total_marks", { test_id: testId });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

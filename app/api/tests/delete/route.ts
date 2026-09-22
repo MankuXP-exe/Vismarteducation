@@ -31,7 +31,7 @@ export async function DELETE(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { error } = await supabaseAdmin.from("tests").delete().eq("id", testId);
+    const { error } = await supabaseAdmin['from']("tests").delete().eq("id", testId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch { return NextResponse.json({ error: "Internal error" }, { status: 500 }); }
