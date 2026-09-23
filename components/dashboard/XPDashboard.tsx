@@ -29,22 +29,33 @@ export default function XPDashboard() {
     fetch("/api/xp/stats")
       .then((r) => r.json())
       .then((d) => {
-        setData(d);
-        if (d?.totalXp != null) setLoading(false);
+        if (d && !d.error) {
+          setData(d);
+        }
+        setLoading(false);
       })
       .catch(() => setLoading(false));
 
     // Award daily login XP once per day
-    const today = new Date().toISOString().split("T")[0];
-    const lastLoginXp = localStorage.getItem("xp_daily_login");
-    if (lastLoginXp !== today) {
-      awardXP("daily_login").then(() => {
-        localStorage.setItem("xp_daily_login", today);
-      });
-    }
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const lastLoginXp = localStorage.getItem("xp_daily_login");
+      if (lastLoginXp !== today) {
+        awardXP("daily_login").then(() => {
+          try {
+            localStorage.setItem("xp_daily_login", today);
+          } catch {}
+        });
+      }
+    } catch {}
   }, [awardXP]);
 
   if (loading) return null;
+
+  const nextLevelXp = data?.nextLevelXp && data.nextLevelXp > 0 ? data.nextLevelXp : 100;
+  const totalXp = data?.totalXp || 0;
+  const currentLevelProgress = totalXp % nextLevelXp;
+  const progressPercent = Math.min(100, Math.max(0, (currentLevelProgress / nextLevelXp) * 100));
 
   return (
     <div className="space-y-4">
@@ -60,7 +71,7 @@ export default function XPDashboard() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Level {data?.level || 1}</p>
-              <h2 className="text-2xl font-bold mt-0.5">{(data?.totalXp || 0).toLocaleString()} XP</h2>
+              <h2 className="text-2xl font-bold mt-0.5">{totalXp.toLocaleString()} XP</h2>
             </div>
             <div className="text-right">
               <p className="text-white/70 text-xs">Weekly XP</p>
@@ -68,22 +79,20 @@ export default function XPDashboard() {
             </div>
           </div>
           {/* Level progress */}
-          {data && (
-            <div>
-              <div className="flex justify-between text-xs text-white/70 mb-1">
-                <span>Level {data.level}</span>
-                <span>{(data.totalXp % data.nextLevelXp).toLocaleString()} / {data.nextLevelXp.toLocaleString()} XP</span>
-              </div>
-              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((data.totalXp % data.nextLevelXp) / data.nextLevelXp) * 100}%` }}
-                  className="h-full rounded-full"
-                  style={{ background: "#fdd835" }}
-                />
-              </div>
+          <div>
+            <div className="flex justify-between text-xs text-white/70 mb-1">
+              <span>Level {data?.level || 1}</span>
+              <span>{currentLevelProgress.toLocaleString()} / {nextLevelXp.toLocaleString()} XP</span>
             </div>
-          )}
+            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                className="h-full rounded-full"
+                style={{ background: "#fdd835" }}
+              />
+            </div>
+          </div>
         </div>
       </motion.div>
 
@@ -105,7 +114,7 @@ export default function XPDashboard() {
       </div>
 
       {/* Badges */}
-      {data && data.allBadges.length > 0 && (
+      {data && Array.isArray(data.allBadges) && data.allBadges.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h3 className="text-sm font-bold text-gray-900 mb-3">Badges & Achievements</h3>
           <div className="flex flex-wrap gap-2">
@@ -121,7 +130,7 @@ export default function XPDashboard() {
       )}
 
       {/* Recent XP Activity */}
-      {data && data.recentLogs.length > 0 && (
+      {data && Array.isArray(data.recentLogs) && data.recentLogs.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h3 className="text-sm font-bold text-gray-900 mb-3">Recent Activity</h3>
           <div className="space-y-2">

@@ -52,7 +52,26 @@ export async function awardXP(
 export async function getUserXPStats(userId?: string) {
   try {
     const { data } = await api.xp.getStats();
-    if (data) return data;
+    if (data) {
+      const p = (data as any).profile || data;
+      const totalXp = Number(p.totalXp ?? p.xp_points ?? 0);
+      const level = Number(p.level ?? calcLevel(totalXp));
+      const nextLevelXp = Number(p.nextLevelXp ?? xpForNextLevel(level));
+      return {
+        totalXp,
+        weeklyXp: Number(p.weeklyXp ?? p.weekly_xp ?? 0),
+        dailyXp: Number(p.dailyXp ?? p.daily_xp ?? 0),
+        level,
+        streakDays: Number(p.streakDays ?? p.streak_days ?? 0),
+        longestStreak: Number(p.longestStreak ?? p.longest_streak ?? p.streakDays ?? p.streak_days ?? 0),
+        rank: p.rank ?? null,
+        weeklyRank: p.weeklyRank ?? null,
+        nextLevelXp: nextLevelXp > 0 ? nextLevelXp : 100,
+        recentLogs: Array.isArray((data as any).recentLogs) ? (data as any).recentLogs : [],
+        badges: Array.isArray((data as any).badges) ? (data as any).badges : [],
+        allBadges: Array.isArray((data as any).allBadges) ? (data as any).allBadges : [],
+      };
+    }
   } catch {}
   return {
     totalXp: 0,
@@ -61,8 +80,9 @@ export async function getUserXPStats(userId?: string) {
     level: 1,
     streakDays: 0,
     longestStreak: 0,
-    rank: 0,
-    weeklyRank: 0,
+    rank: null,
+    weeklyRank: null,
+    nextLevelXp: 100,
     recentLogs: [],
     badges: [],
     allBadges: [],
