@@ -13,6 +13,7 @@ type ProfileRole = {
 export function getEffectiveRole(user: User | null, profile?: ProfileRole) {
   return (
     profile?.role ||
+    user?.role ||
     user?.app_metadata?.role ||
     user?.user_metadata?.role ||
     "student"
@@ -21,9 +22,10 @@ export function getEffectiveRole(user: User | null, profile?: ProfileRole) {
 
 export function hasTeacherAccess(user: User | null, profile?: ProfileRole) {
   const role = getEffectiveRole(user, profile);
-  return role === "teacher" || role === "admin";
+  return role === "teacher" || role === "admin" || role === "super_admin";
 }
 
 export function hasAdminAccess(user: User | null, profile?: ProfileRole) {
-  return getEffectiveRole(user, profile) === "admin";
+  const role = getEffectiveRole(user, profile);
+  return role === "admin" || role === "super_admin";
 }

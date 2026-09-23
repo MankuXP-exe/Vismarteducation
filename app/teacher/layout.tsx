@@ -17,7 +17,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     .maybeSingle();
 
   const role = getEffectiveRole(user, profile);
-  if (role !== "teacher" && role !== "admin") redirect("/dashboard");
+  if (role !== "teacher" && role !== "admin" && role !== "super_admin") redirect("/dashboard");
 
   return (
     <div className="min-h-screen bg-[#f7f8fc]">

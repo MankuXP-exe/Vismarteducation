@@ -94,19 +94,20 @@ const navSections: NavSection[] = [
 
 export default function Sidebar() {
   const { user, profile } = useAuth();
-  const role = getEffectiveRole(user);
+  const role = getEffectiveRole(user, profile);
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const sections: NavSection[] =
-  role === "teacher" || role === "admin"
+  const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
+
+  const sections: NavSection[] = isStaff
     ? [
         ...navSections,
         {
           title: "ADMIN",
           items: [
             {
-              label: role === "admin" ? "Admin Panel" : "Teacher Panel",
+              label: role === "teacher" ? "Teacher Panel" : "Admin Panel",
               icon: <ShieldCheck size={18} />,
               href: "/teacher",
             },

@@ -19,7 +19,7 @@ export default function TopNavbar() {
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email || "Student";
   const firstName = displayName?.split(" ")[0] || "Student";
-  const role = profile?.role || user?.user_metadata?.role || "student";
+  const role = profile?.role || user?.role || user?.user_metadata?.role || "student";
   const initial = displayName.charAt(0).toUpperCase();
 
   // Close dropdown on outside click
@@ -37,6 +37,7 @@ export default function TopNavbar() {
     student: { label: "Student", icon: GraduationCap, color: "bg-blue-500" },
     teacher: { label: "Teacher", icon: Shield, color: "bg-purple-500" },
     admin: { label: "Admin", icon: Shield, color: "bg-red-500" },
+    super_admin: { label: "Super Admin", icon: Shield, color: "bg-red-600" },
   } as const;
   const roleInfo = roleConfig[role as keyof typeof roleConfig] || roleConfig.student;
   const RoleIcon = roleInfo.icon;
@@ -132,11 +133,11 @@ export default function TopNavbar() {
                       <User size={16} className="text-gray-400" />
                       Profile Settings
                     </Link>
-                    {role === "teacher" || role === "admin" ? (
+                    {role === "teacher" || role === "admin" || role === "super_admin" ? (
                       <Link href="/teacher" onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50">
                         <Settings size={16} className="text-gray-400" />
-                        Teacher Panel
+                        {role === "teacher" ? "Teacher Panel" : "Admin Panel"}
                       </Link>
                     ) : null}
                     <Link href="/dashboard/study" onClick={() => setProfileOpen(false)}
@@ -189,8 +190,9 @@ export default function TopNavbar() {
 
 function MobileNavLinks({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
-  const { profile } = useAuth();
-  const role = profile?.role || "student";
+  const { profile, user } = useAuth();
+  const role = profile?.role || user?.role || "student";
+  const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
 
   const isActive = (href: string) =>
     href === "/dashboard/study" ? pathname?.startsWith("/dashboard/study")
@@ -205,10 +207,10 @@ function MobileNavLinks({ onClose }: { onClose: () => void }) {
     { label: "My Doubts", href: "/dashboard/doubts", section: "STUDY PACKS" },
     { label: "Bookmarks", href: "/dashboard/bookmarks", section: "STUDY PACKS" },
     { label: "Fee Concession", href: "/concession", section: "MORE", badge: "NEW" },
-    { label: "Teacher Panel", href: "/teacher", section: "ADMIN", roles: ["teacher", "admin"] },
+    { label: role === "teacher" ? "Teacher Panel" : "Admin Panel", href: "/teacher", section: "ADMIN", roles: ["teacher", "admin", "super_admin"] },
   ];
 
-  const visible = role === "teacher" || role === "admin" ? items : items.filter((i) => !i.roles || i.roles.includes(role));
+  const visible = isStaff ? items : items.filter((i) => !i.roles || i.roles.includes(role));
   const sections = [...new Set(visible.map((i) => i.section))];
 
   return sections.map((section) => (
