@@ -309,44 +309,43 @@ The next AI must:
 
 ## CURRENT ARCHITECTURE
 
-Vercel Next.js Frontend -> Nginx Proxy -> Fastify VPS API -> PostgreSQL VPS & MediaMTX & VPS Storage.
+Browser / Next.js (Vercel)
+  ├── Auth: Supabase Auth (Identity only, JWT verification)
+  └── API & Data: Fastify VPS API (`https://api.vismartlearningeducation.com`)
+        ├── PostgreSQL VPS (`vismart_db`, users, profiles, RBAC, batches, enrollments, etc.)
+        ├── MediaMTX (`rtmp://`, `whip://`, `whep://` live streaming)
+        └── VPS Local Protected Storage (`/opt/vi-smart/recordings`, notes, PDFs)
 
 ## IMPORTANT COMMITS
 
 ### Frontend (GitHub: MankuXP-exe/Vismarteducation)
-See the GITHUB section above (`3aea552`, `b5c6f5f`, `7ecf664`, `d128f43`, `8241a4e`, `62eb65e`, `998695a`, `1d14c73`, `6c530dc`).
-Plus: `cde61e4` (Feature 8 validation cleanup), `7268053` (dead proxy.ts removal).
+- `f33a104`: Production release of Feature 9 (Supabase Auth restoration)
+- `b60fb4a`: Auth UI hotfix using native Supabase Auth methods (`signInWithPassword`, `signUp`, `resetPasswordForEmail`)
+- `1bfad94`: Added password update component on `/dashboard/profile` for password recovery flow
+- `e7c98e6`: Fixed crash on `/dashboard/study` by hardening `XPDashboard.tsx` against undefined XP stats and adding `/dashboard/error.tsx`
+- `dcf66e5`: Fixed dashboard navigation: passed `profile` to `getEffectiveRole` and enabled `ADMIN` panel in sidebar for `teacher`, `admin`, and `super_admin`
 
-### Backend (VPS only: /opt/vi-smart-api)
-`e3cea61` (initial backend source), `1a257a0` (remove .env/dist from tracking).
+### Backend (VPS: /opt/vi-smart-api)
+- `5cc1579`: Production release of Feature 9 backend
+- `b005eee`: JIT PostgreSQL provisioning for Supabase Auth users in `requireAuth`
+- `2246455`: Security fix: hardcoded `"student"` role for JIT self-service signups to prevent role escalation
+- `35ac6dd`: Added `/stats` and `/award` endpoints to gamification routes with `/xp` route prefix alias
 
-## KNOWN ISSUES
+## USER ACCOUNTS & ROLES
 
-- **3 legacy users (May 2026) have corrupted Argon2id password hashes** from Supabase migration. They cannot log in with their original passwords. Remediation: the forgot-password flow works for these accounts — users can self-serve a password reset. No passwords were changed, no accounts deleted.
-- **Dead Supabase stub files remain** (`lib/supabase/client.ts`, `server.ts`, `admin.ts`, `queries.ts`, `teacher-content.ts`, `batches-data.ts`). These are imported by ~100 files but are null Proxies / VPS-only wrappers with zero Supabase network calls. Removing them requires a large refactor touching 100+ import sites. Safe to defer post-cutover.
-- **Backend is a separate git repo** at `/opt/vi-smart-api` (not pushed to remote). Frontend git is at `/root/Vismarteducation` (pushed to GitHub).
+- `xteachgaming@gmail.com`: Primary administrator / teacher (Mayank). Role is `admin` in both PostgreSQL and Supabase Auth.
+- All self-service signups: Provisioned with role `student`. Role upgrades require administrative action.
 
-## NEXT STEPS
+## KNOWN ISSUES & STATUS
 
-- Push backend repo to remote for backup/disaster recovery.
-- Resolve 3 corrupted legacy account hashes when account owners initiate password reset.
-- Remove remaining dead Supabase stub files (larger refactor, safe to do post-cutover).
-- Final production cutover: deploy Vercel, switch DNS, verify production.
-
-## DO NOT DO
-
-- Do not expose any secrets.
-- Do not deploy to Vercel.
-- Do not delete Supabase yet.
-- Do not change DNS.
+- **All Production Auth & Navigation Verified:**
+  - Login (`/login`), Signup (`/signup`), Password Recovery (`/forgot-password`, `/dashboard/profile`) working natively via Supabase Auth.
+  - Student Dashboard (`/dashboard`, `/dashboard/study`, `/dashboard/batches`) loading cleanly.
+  - Staff / Teacher / Admin Panel (`/teacher`) accessible from the `ADMIN` sidebar section for staff users.
+  - Backend JIT provisioning creates PostgreSQL user & profile rows seamlessly on first authenticated request.
 
 ---
 
-# CURRENT NEXT ACTION
+# CURRENT STATUS
 
-Feature 8 is validated. All critical systems pass. Ready for production cutover decision.
-
-Remaining before cutover:
-- Push backend repo to remote
-- Resolve 3 legacy account hashes (via forgot-password self-service)
-- Final production deployment and DNS switch (when explicitly instructed)
+Feature 9 cutover, auth completion, and navigation fixes are fully deployed and operational in production.
